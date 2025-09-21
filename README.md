@@ -153,3 +153,6 @@ Isolated customer space with dedicated data, policies, SLAs, and billing.
 
 #### Operation
 Wrapper for all operations on the network.
+
+#### (The) Network
+Multi-cloud, multi-tenant, high-level operations system solution.
