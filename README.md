@@ -86,6 +86,6 @@ The repository for the ECOTWIN Reference Architecture. ECOTWIN is an IPCEI proje
 
 #### Maintainer
 
-#### Business Ressources
+### Business Ressources
 #### Product / Vertical
 #### Tenant
