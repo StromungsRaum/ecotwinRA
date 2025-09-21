@@ -6,7 +6,7 @@ The repository for the ECOTWIN Reference Architecture. ECOTWIN is an IPCEI proje
 
 ### Software Resources
 
-#### Workload Manager (SLURM)
+#### Workload Manager / Batch Manager
 
 #### Containerized Application (Apptainer)
 
@@ -15,16 +15,35 @@ The repository for the ECOTWIN Reference Architecture. ECOTWIN is an IPCEI proje
 #### Optimization Agent
 
 #### Service
+- Heavy-weight
+- Light-weight
+- asynch
+- synch
 
-#### Simulation Model
+#### Model
+- Simulation Model (High-Fidelity)
+- Surrogate Model
+- Reduced Order Model
 
-#### Surrogate Model
-
-#### Execution Layer
+#### Layer
+- Process Layer
+- Application Layer
+- Model layer
+- Domain Layer
+- Data Layer
+- Execution Layer
 
 #### Job
 
 #### Process
+
+#### Batch
+
+#### Virtual Representation
+
+#### Virtual Prototype
+
+#### Digital Twin
 
 ### Hardware Resources
 
@@ -38,18 +57,35 @@ The repository for the ECOTWIN Reference Architecture. ECOTWIN is an IPCEI proje
 
 #### Cloud
 
-#### HPC Infrastructure
-
 #### Sensors
 
 #### Storage
 
+#### Cluster
+
+#### Server
+
+#### Device
+
+#### Host
+
+#### Compute Grid
+
 ### Network Resources
+#### Interconnect
 
 ### People
 
-#### Customer
+#### Creator
 
-#### Marketplace
+#### Attractor
 
-#### Security & Compliance
+#### Extractor
+
+#### Vendor
+
+#### Maintainer
+
+#### Business Ressources
+#### Product / Vertical
+#### Tenant
