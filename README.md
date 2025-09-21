@@ -60,7 +60,7 @@ Versioned store for meshes, configs, checkpoints, and surrogate snapshots with p
 #### HPC Queue / QoS Class
 Workload class with preemption/priority, reservation, and accelerator constraints under scheduler control.
 
-### Layer
+#### Layer
 - **Process Layer** – Domain-specific step chain with **process-gates** (temporal/spatial causality, handover/rollback criteria).
 - **Application Layer** – Verticals and apps initiating and coordinating processes.
 - **Model Layer** – HiFi/Surrogate/ROM assets exposed via model-gates.
@@ -68,16 +68,16 @@ Workload class with preemption/priority, reservation, and accelerator constraint
 - **Data Layer** – Persistence, data-bridge, feature pipelines, metadata/catalog.
 - **Execution Layer** – Runtime targets (edge/cluster/cloud) and control loops.
 
-### Process (industrial)
+#### Process (industrial)
 Business/engineering workflow step (domain-specific) with defined inputs/outputs, QoS, KPIs and **process-gates** across the value chain.
 
-### Virtual Representation
+#### Virtual Representation
 Abstract data-driven view of an asset/system without full simulation synchronization.
 
-### Virtual Prototype
+#### Virtual Prototype
 Composable, simulatable bundle of domains and models representing a system design.
 
-### Digital Twin
+#### Digital Twin
 Bi-directionally synchronized VP/VR with live data, state estimation, and actuation path.
 
 ### Hardware Resources
