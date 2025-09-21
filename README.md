@@ -150,3 +150,6 @@ Marketed domain solution (e.g., Pump Suite) built on the ECOTWIN platform.
 
 #### Tenant
 Isolated customer space with dedicated data, policies, SLAs, and billing.
+
+#### Operation
+Wrapper for all operations on the network.
