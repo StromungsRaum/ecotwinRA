@@ -20,6 +20,7 @@ from ecotwin.lazy_group import LazyGroup
     lazy_subcommands={"info": "ecotwin.info.info"},
     help="Twin Control",
 )
+@click.version_option(package_name="ecotwin")
 def twinctl():
     print("Hello from twinctl!")
 
