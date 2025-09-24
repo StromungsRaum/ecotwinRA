@@ -4,6 +4,7 @@
 # dependencies = [
 #     "click",
 #     "ecotwin",
+#     "pprintpp",
 #     "pyyaml",
 # ]
 #
