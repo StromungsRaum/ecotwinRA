@@ -1,0 +1,35 @@
+
+
+industrial_processes:
+  pump-process:
+    name: PumpProcess
+    description: An industrial process involving a pump
+    digital_twin: pump-twin
+
+digital_twins:
+  pump-twin:
+    name: PumpTwin
+    description: A digital twin for the pump process
+    applications:
+      - pump-model-application
+      - motor-management-application
+
+applications:
+  pump-model-application:
+    type: FlowSimulation
+    description: A pump application that models
+    model: flow-model
+  motor-management-application:
+    type: MotorManagement
+    description: A pump application that models
+
+models:
+  flow-model:
+    name: FlowModel
+    type: Simulation
+    description: A model for simulating fluid flow
+
+  motor-model:
+    name: MotorModel
+    type: Simulation
+    description: A model for simulating motor behavior
