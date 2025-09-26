@@ -7,4 +7,4 @@ from beeprint import pp
 def info(twin_info):
     """Display information about the EcoTwin system."""
     click.echo("EcoTwin System Information:")
-    pp(twin_info.config)
+    pp(twin_info.config, indent=4)
