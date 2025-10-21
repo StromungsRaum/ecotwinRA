@@ -1,5 +1,34 @@
 # Concepts
 
+## Introduction
+
+### What is ECOTWIN?
+**ECOTWIN** is a cloud-edge extension of **StrömungsRaum (SR)** that turns SR’s simulation/optimization/AI capabilities into a **distributed “cloud ↔ edge” digital-twin fabric**. It lets you run **inference and monitoring close to machines at the edge**, while **training, DoE, and heavy simulation** continue in SR’s cloud/HPC core—connected by a governed data/metadata plane.
+
+**Key ideas**
+- **Twin continuum:** Edge twins (fast inference, anomaly/drift detection) pair with cloud twins (hi-fi sims, retraining, optimization).  
+- **Policy-first data flow:** Classified, encrypted **ingress/egress** between edge sites and SR’s enterprise data fabric.  
+- **Lifecycle sync:** Model registry, versioning, and **promotion** propagate from cloud to edge with staged rollouts and rollback.  
+- **Resilience & locality:** Works offline/intermittent; buffers events and reconciles when connectivity returns.  
+- **Agentic operations (optional):** Edge agents can trigger **retraining** or **parameter updates** upstream based on drift/quality KPIs.
+
+**What it adds to SR**
+- Edge runtimes & connectors (OPC UA/MQTT)  
+- Deployment policies for **geo/residency** and **SLOs** per site  
+- Managed **over-the-air** updates for models and monitoring rules  
+- Unified observability & FinOps across cloud and edge scopes
+
+### What is StrömungsRaum?
+**StrömungsRaum (SR)** is an **industry cloud platform** for **high‑fidelity simulation**, **optimization**, and **AI models**—built for **HPC at scale** (cloud / on‑prem / hybrid). 
+
+Learn more about the StrömungsRaum platform at [ianus-simulation.de/stroemungsraum](https://ianus-simulation.de/stroemungsraum).
+
+## Value Proposition (at a glance)
+- **Time‑to‑Value:** Turn input data into trustworthy results in hours instead of weeks.
+- **Scale:** Thousands of parallel runs (DoE/optimization/training) across orchestrated compute on supercomputers.
+- **Quality & Reproducibility:** Versioned process chains, data/model governance, SLO‑backed.
+- **Secure Data Paths:** Policy‑driven **egress** into the enterprise data fabric, OIDC federation, auditability.
+
 ## Software Resources
 
 ### Workload Manager / Batch Manager
