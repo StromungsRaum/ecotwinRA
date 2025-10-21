@@ -25,3 +25,9 @@ Each individual twin will be configured using a set of YAML files.
 The controller will be use the twin information to make sure that dependent tools have consistent information.
 
 Twin controller is further documented in [twinctl](./docs/twinctl.md).
+
+## Funding
+
+For programme details and usage guidance, see [Funded By](./docs/funding.md).
+
+[![Funded by the European Union and supported by the German Federal Ministry for Economic Affairs and Energy](assets/funding/funded-by-eu-bmwi.png)](./docs/funding.md)
