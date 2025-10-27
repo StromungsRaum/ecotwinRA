@@ -59,3 +59,7 @@ Twin controller is further documented in [twinctl](./docs/twinctl.md).
 For programme details and usage guidance, see [Funded By](./docs/funding.md).
 
 [![Funded by the European Union and supported by the German Federal Ministry for Economic Affairs and Energy](assets/funding/funded-by-eu-bmwi.png)](./docs/funding.md)
+
+## License
+
+This project is released under the terms described in the [license](./license.md).
