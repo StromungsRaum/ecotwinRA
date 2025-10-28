@@ -16,11 +16,17 @@ digital_twins:
       - hotrunner-heat-hifi
       - hotrunner-sensor-genai
       - hotrunner-hepos-genai
+    sensors:
+      - temperature-sensor
+      - flowrate-sensor
+
   injectmold-dt:
     name: InjectMoldTwin
     description: A digital twin for the injectmold process based on STEP file upload an a hifi model
     applications:
       - injectmold-flow-hifi
+    sensors:
+      - pressure-sensor
 
 applications:
   hotrunner-heat-hifi:
@@ -38,7 +44,7 @@ applications:
   injectmold-flow-hifi:
     type: FlowSimulation
     description: 
-    model: tuda-featflower-flow-model
+    model: tuda-flow-model
 
 models:
   tudo-featflower-heat-model:
@@ -53,7 +59,21 @@ models:
     name: IANUSHePos
     type: OptimizerAgent
     description: A generative AI agent for optimizing heater positions in hotrunner systems
-  tuda-featflower-flow-model:
+  tuda-flow-model:
     name: OpenFAOMFlow
     type: PDESimulation
     description: A hi-fi model for simulating fluid flow in injection molding processes 
+
+sensors:
+  temperature-sensor:
+    name: TemperatureSensor
+    type: Temperature
+    description: A sensor measuring temperature in hotrunner systems
+  flowrate-sensor:
+    name: FlowRateSensor
+    type: FlowRate
+    description: A sensor measuring flow rate in hotrunner systems 
+  pressure-sensor:
+    name: PressureSensor
+    type: Pressure
+    description: A sensor measuring pressure in injection molding systems

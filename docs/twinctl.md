@@ -75,12 +75,13 @@ Options:
 
 `twinctl` creates the root Markdown file named after the provided root title.
 Each industrial process referenced in `industrial_processes` receives its own
-document. Within a process page, all linked digital twins are listed; each twin
-page links to its applications; each application page links to the associated
-models. Filenames derive from the `name` field of each entity (falling back to
-the ID if no name exists), normalized for filesystem safety. The generator warns
-in the terminal if a referenced twin, application, or model is missing from the
-configuration.
+document. Entity pages include a `## Linked Entities` section containing every
+referenced ID discovered anywhere in the entity’s fields (lists, mappings, nested
+structures). That means you automatically get links from processes to digital twins,
+from twins to applications, sensors, and beyond—whatever the YAML graph contains.
+Filenames derive from the `name` field of each entity (falling back to the ID if no
+name exists), normalized for filesystem safety. The generator warns in the terminal
+if a referenced entity is missing from the configuration.
 
 After generation you can use the resulting Markdown tree directly in user-facing
 documentation or feed it into static site tooling. The process is idempotent—run

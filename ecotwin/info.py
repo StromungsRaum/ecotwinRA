@@ -3,6 +3,7 @@ import re
 
 import click
 from beeprint import pp
+import yaml
 
 
 def _format_tree(value, indent=0):
@@ -157,14 +158,14 @@ def _write_markdown(path: Path, lines: list[str]) -> None:
 def generate_markdown_files(config, root_name: str, output_dir: Path) -> Path:
     """Generate Markdown files representing the twin hierarchy."""
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    registry = _build_registry(config)
     context = {
         "config": config,
+        "registry": registry,
         "output_dir": output_dir,
         "used_filenames": set(),
-        "process_files": {},
-        "digital_twin_files": {},
-        "application_files": {},
-        "model_files": {},
+        "entity_files": {},
     }
 
     root_stem = _safe_filename(root_name, "root")
@@ -176,162 +177,126 @@ def generate_markdown_files(config, root_name: str, output_dir: Path) -> Path:
 
     if processes:
         lines.extend(["", "## Industrial Processes"])
-        for process_id, process_data in processes.items():
-            process_filename, process_title = _write_process_file(
-                process_id, process_data, context
-            )
-            if process_filename:
-                lines.append(f"- [{process_title}]({process_filename})")
+        for process_id in processes:
+            entity_info = _write_entity(process_id, context)
+            if entity_info:
+                filename, title = entity_info
+                lines.append(f"- [{title}]({filename})")
+            else:
+                lines.append(f"- {process_id} (missing)")
 
     _write_markdown(root_path, lines)
     return root_path
 
 
-def _write_process_file(process_id, process_data, context):
-    title = process_data.get("name") or process_id
-    filename = context["process_files"].get(process_id)
-    if filename:
-        return filename, title
-
-    stem = _safe_filename(title, process_id)
-    filename = _uniq_filename(stem, context["used_filenames"])
-    context["process_files"][process_id] = filename
-
-    lines = [f"# {title}"]
-    description = process_data.get("description")
-    if description:
-        lines.extend(["", description])
-
-    digital_refs = process_data.get("digital_twin") or []
-    if isinstance(digital_refs, str):
-        digital_refs = [digital_refs]
-
-    if digital_refs:
-        lines.extend(["", "## Digital Twins"])
-        for digital_id in digital_refs:
-            digital_info = _write_digital_twin_file(digital_id, context)
-            if digital_info:
-                digital_filename, digital_title = digital_info
-                lines.append(f"- [{digital_title}]({digital_filename})")
-            else:
-                lines.append(f"- {digital_id} (missing)")
-
-    _write_markdown(context["output_dir"] / filename, lines)
-    return filename, title
+def _build_registry(config):
+    """Collect all entity definitions by ID."""
+    registry = {}
+    for section, entries in config.items():
+        if not isinstance(entries, dict):
+            continue
+        for entity_id, data in entries.items():
+            if isinstance(data, dict):
+                registry[entity_id] = {"section": section, "data": data}
+    return registry
 
 
-def _write_digital_twin_file(digital_id, context):
-    cache = context["digital_twin_files"]
-    if digital_id in cache:
-        return cache[digital_id]
+def _write_entity(entity_id, context):
+    """Create or return the markdown file for an entity."""
+    cache = context["entity_files"]
+    if entity_id in cache:
+        return cache[entity_id]
 
-    digital_twins = context["config"].get("digital_twins", {})
-    digital_data = digital_twins.get(digital_id)
-    if not digital_data:
-        click.echo(f"Warning: digital twin '{digital_id}' not defined.")
+    entity = context["registry"].get(entity_id)
+    if not entity:
+        click.echo(f"Warning: entity '{entity_id}' not defined.")
         return None
 
-    title = digital_data.get("name") or digital_id
-    stem = _safe_filename(title, digital_id)
+    data = entity["data"]
+    title = data.get("name") or entity_id
+    stem = _safe_filename(title, entity_id)
     filename = _uniq_filename(stem, context["used_filenames"])
-    cache[digital_id] = (filename, title)
+    cache[entity_id] = (filename, title)
 
     lines = [f"# {title}"]
-    description = digital_data.get("description")
+    description = data.get("description")
     if description:
         lines.extend(["", description])
 
-    applications = digital_data.get("applications") or []
-    if applications:
-        lines.extend(["", "## Applications"])
-        for app_id in applications:
-            app_info = _write_application_file(app_id, context)
-            if app_info:
-                app_filename, app_title = app_info
-                lines.append(f"- [{app_title}]({app_filename})")
-            else:
-                lines.append(f"- {app_id} (missing)")
+    remaining = {
+        key: value
+        for key, value in data.items()
+        if key not in {"name", "description"}
+    }
+
+    if remaining:
+        lines.extend(["", "## Fields"])
+        for key, value in remaining.items():
+            lines.extend(_render_field(key, value))
+
+    references = _collect_references(remaining, context["registry"])
+    references.discard(entity_id)
+
+    if references:
+        lines.extend(["", "## Linked Entities"])
+        by_section = {}
+        for ref_id in references:
+            ref_entity = context["registry"].get(ref_id)
+            if not ref_entity:
+                continue
+            section = ref_entity["section"]
+            by_section.setdefault(section, []).append(ref_id)
+
+        for section, ref_ids in sorted(by_section.items()):
+            section_title = section.replace("_", " ").title()
+            lines.append(f"### {section_title}")
+            for ref_id in sorted(
+                ref_ids,
+                key=lambda rid: context["registry"][rid]["data"].get("name") or rid,
+            ):
+                ref_info = _write_entity(ref_id, context)
+                if ref_info:
+                    ref_filename, ref_title = ref_info
+                    lines.append(f"- [{ref_title}]({ref_filename})")
+                else:
+                    lines.append(f"- {ref_id} (missing)")
 
     _write_markdown(context["output_dir"] / filename, lines)
-    return filename, title
+    return cache[entity_id]
 
 
-def _write_application_file(app_id, context):
-    cache = context["application_files"]
-    if app_id in cache:
-        return cache[app_id]
+def _render_field(key, value):
+    """Render a field key/value pair into markdown lines."""
+    label = f"- **{key}**"
 
-    applications = context["config"].get("applications", {})
-    app_data = applications.get(app_id)
-    if not app_data:
-        click.echo(f"Warning: application '{app_id}' not defined.")
-        return None
+    if isinstance(value, dict) or isinstance(value, list):
+        serialized = yaml.safe_dump(value, sort_keys=False).rstrip()
+        if not serialized:
+            return [f"{label}: []"]
+        return [label + ":", "", "```yaml", serialized, "```"]
 
-    title = app_data.get("name") or app_id
-    stem = _safe_filename(title, app_id)
-    filename = _uniq_filename(stem, context["used_filenames"])
-    cache[app_id] = (filename, title)
-
-    lines = [f"# {title}"]
-    description = app_data.get("description")
-    if description:
-        lines.extend(["", description])
-
-    app_type = app_data.get("type")
-    details = []
-    if app_type:
-        details.append(f"- Type: {app_type}")
-
-    if details:
-        lines.extend(["", "## Details"])
-        lines.extend(details)
-
-    models = app_data.get("model")
-    if models:
-        if not isinstance(models, (list, tuple, set)):
-            models = [models]
-        lines.extend(["", "## Models"])
-        for model_id in models:
-            model_info = _write_model_file(model_id, context)
-            if model_info:
-                model_filename, model_title = model_info
-                lines.append(f"- [{model_title}]({model_filename})")
-            else:
-                lines.append(f"- {model_id} (missing)")
-
-    _write_markdown(context["output_dir"] / filename, lines)
-    return filename, title
+    return [f"{label}: {value}"]
 
 
-def _write_model_file(model_id, context):
-    cache = context["model_files"]
-    if model_id in cache:
-        return cache[model_id]
+def _collect_references(value, registry):
+    """Recursively collect entity references from a nested structure."""
+    references = set()
 
-    models = context["config"].get("models", {})
-    model_data = models.get(model_id)
-    if not model_data:
-        click.echo(f"Warning: model '{model_id}' not defined.")
-        return None
+    if isinstance(value, str):
+        if value in registry:
+            references.add(value)
+        return references
 
-    title = model_data.get("name") or model_id
-    stem = _safe_filename(title, model_id)
-    filename = _uniq_filename(stem, context["used_filenames"])
-    cache[model_id] = (filename, title)
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key == "name":
+                continue
+            references.update(_collect_references(item, registry))
+        return references
 
-    lines = [f"# {title}"]
-    description = model_data.get("description")
-    if description:
-        lines.extend(["", description])
+    if isinstance(value, (list, tuple, set)):
+        for item in value:
+            references.update(_collect_references(item, registry))
+        return references
 
-    model_type = model_data.get("type")
-    details = []
-    if model_type:
-        details.append(f"- Type: {model_type}")
-
-    if details:
-        lines.extend(["", "## Details"])
-        lines.extend(details)
-
-    _write_markdown(context["output_dir"] / filename, lines)
-    return filename, title
+    return references
