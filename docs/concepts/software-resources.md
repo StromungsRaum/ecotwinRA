@@ -86,14 +86,14 @@ Workload class with preemption/priority, reservation, and accelerator constraint
 
 Business/engineering workflow step (domain-specific) with defined inputs/outputs, QoS, KPIs and **process-gates** across the value chain.
 
-## Virtual Representation
+## Virtual Representation (VR)
 
 Abstract data-driven view of an asset/system without full simulation synchronization.
 
-## Virtual Prototype
+## Virtual Prototype (VP)
 
 Composable, simulatable bundle of domains and models representing a system design.
 
-## Digital Twin
+## Digital Twin (DT)
 
 Bi-directionally synchronized VP/VR with live data, state estimation, and actuation path.
