@@ -31,14 +31,14 @@ digital_twins:
 applications:
   hotrunner-heat-hifi:
     type: HeatSimulation
-    description: 
+    description: Analysis of heat distribution in hotrunner systems
     model: tudo-featflower-heat-model
     data-bridges:
       - temperature-sensor
       - flowrate-sensor
   hotrunner-sensor-genai:
     type: ConstructionAssistant
-    description: 
+    description: Co-construction of optimal sensor placements in hotrunner systems
     model: ianus-sensorgsp-genai-model
   hotrunner-hepos-genai:
     type: ConstructionAgent
@@ -46,7 +46,7 @@ applications:
     model: ianus-hepos-genai-model
   injectmold-flow-hifi:
     type: FlowSimulation
-    description: 
+    description: Analysis of fluid flow in injection molding processes
     model: tuda-flow-model
     data-bridges:
       - pressure-sensor

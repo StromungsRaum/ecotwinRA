@@ -23,14 +23,23 @@ digital_twins:
     description: A digital twin for the injectmold process based on STEP file upload an a hifi model
     applications:
       - hotrunner-injectmold-holistic-hifi
+      - hotrunner-injectmold-surrogate-pressure
     sensors:
       - pressure-sensor
 
 applications:
   hotrunner-injectmold-holistic-hifi:
-    type: HeatSimulation
-    description: 
+    type: MultiphysicsSimulation
+    description: Analysis of heat distribution in hotrunner systems coupled with fluid flow in injection molding processes.
     model: tuda-ecotwin-holistic
+    data-bridges:
+      - temperature-sensor
+      - flowrate-sensor
+      - pressure-sensor
+  hotrunner-injectmold-surrogate-pressure:
+    type: SurrogateIntegralPressure
+    description: Real-time optimization of pressure in a hotrunner and injection molding process.
+    model: ianus-ecotwin-surrogate-pressure
     data-bridges:
       - temperature-sensor
       - flowrate-sensor
