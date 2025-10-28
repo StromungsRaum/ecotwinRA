@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo/logo_export.png" alt="ECOTWIN" width="640" />
+</p>
+
 # ECOTWIN Reference Architecture
 
 ## Introduction
