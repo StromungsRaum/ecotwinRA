@@ -1,0 +1,59 @@
+industrial_processes:
+  hotrunner-process:
+    name: HotrunnerProcess
+    description: An industrial process heating and distributing a flowchannel filled with polymer melt fluid flow 
+    digital_twin: hotrunner-dt
+  injection-molding-process:
+    name: InjectMoldProcess
+    description: An industrial process filling a cavity with polymer melt fluid flow 
+    digital_twin: injectmold-dt
+
+digital_twins:
+  hotrunner-dt:
+    name: HotrunnerTwin
+    description: A digital twin for the hotrunner process based on a STEP upload and several hifi an ai models
+    applications:
+      - hotrunner-heat-hifi
+      - hotrunner-sensor-genai
+      - hotrunner-hepos-genai
+  injectmold-dt:
+    name: InjectMoldTwin
+    description: A digital twin for the injectmold process based on STEP file upload an a hifi model
+    applications:
+      - injectmold-flow-hifi
+
+applications:
+  hotrunner-heat-hifi:
+    type: HeatSimulation
+    description: 
+    model: tudo-featflower-heat-model
+  hotrunner-sensor-genai:
+    type: ConstructionAssistant
+    description: 
+    model: ianus-sensorgsp-genai-model
+  hotrunner-hepos-genai:
+    type: ConstructionAgent
+    description: 
+    model: ianus-hepos-genai-model
+  injectmold-flow-hifi:
+    type: FlowSimulation
+    description: 
+    model: tuda-featflower-flow-model
+
+models:
+  tudo-featflower-heat-model:
+    name: FeatflowerHeat
+    type: PDESimulation
+    description: A hi-fi model for simulating heat distribution in hotrunner systems
+  ianus-sensorgsp-genai-model:
+    name: IANUSSensorGSP
+    type: Optimizer
+    description: A generative AI model for designing sensor placements in hotrunner systems
+  ianus-hepos-genai-model:
+    name: IANUSHePos
+    type: OptimizerAgent
+    description: A generative AI agent for optimizing heater positions in hotrunner systems
+  tuda-featflower-flow-model:
+    name: OpenFAOMFlow
+    type: PDESimulation
+    description: A hi-fi model for simulating fluid flow in injection molding processes 
