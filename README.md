@@ -60,6 +60,12 @@ For programme details and usage guidance, see [Funded By](./docs/funding.md).
 
 [![Funded by the European Union and supported by the German Federal Ministry for Economic Affairs and Energy](assets/funding/funded-by-eu-bmwi.png)](./docs/funding.md)
 
+## Partners
+
+- [IANUS Simulation GmbH](https://ianus-simulation.de/)
+- [TU Dortmund University — Institute for Applied Mathematics and Numerics](https://wwwold.mathematik.tu-dortmund.de/lsiii/cms/en/lehrstuhl3.html)
+- [TU Darmstadt](https://www.tu-darmstadt.de/)
+
 ## License
 
 This project is released under the terms described in the [license](./license.md).
