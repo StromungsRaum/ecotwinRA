@@ -86,3 +86,11 @@ if a referenced entity is missing from the configuration.
 After generation you can use the resulting Markdown tree directly in user-facing
 documentation or feed it into static site tooling. The process is idempotent—run
 it whenever the YAML changes to keep the documentation in sync.
+
+## Capability Reference
+
+Detailed playbooks for provisioning and operating twin workloads live alongside the
+controller:
+
+- [Provisioning (Control Plane)](twinctl/capabilities/provisioning.md)
+- [Operations (Runtime)](twinctl/capabilities/operations.md)
