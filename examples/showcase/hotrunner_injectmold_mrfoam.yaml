@@ -1,0 +1,57 @@
+industrial_processes:
+  hotrunner-process:
+    name: HotrunnerProcess
+    description: An industrial process heating and distributing a flowchannel filled with polymer melt fluid flow 
+    digital_twin: hotrunner-dt
+  injection-molding-process:
+    name: InjectMoldProcess
+    description: An industrial process filling a cavity with polymer melt fluid flow 
+    digital_twin: injectmold-dt
+
+digital_twins:
+  hotrunner-dt:
+    name: HotrunnerTwin
+    description: A digital twin for the hotrunner process based on a STEP upload and several hifi an ai models
+    applications:
+      - hotrunner-injectmold-holistic-hifi
+    sensors:
+      - temperature-sensor
+      - flowrate-sensor
+
+  injectmold-dt:
+    name: InjectMoldTwin
+    description: A digital twin for the injectmold process based on STEP file upload an a hifi model
+    applications:
+      - hotrunner-injectmold-holistic-hifi
+    sensors:
+      - pressure-sensor
+
+applications:
+  hotrunner-injectmold-holistic-hifi:
+    type: HeatSimulation
+    description: 
+    model: tuda-ecotwin-holistic
+    data-bridges:
+      - temperature-sensor
+      - flowrate-sensor
+      - pressure-sensor
+
+models:
+  tuda-ecotwin-holistic:
+    name: ORFOAMHolistic
+    type: Multiphysics
+    description: A hi-fi model for simulating heat distribution in hotrunner systems coupled with fluid flow in injection molding processes.
+
+sensors:
+  temperature-sensor:
+    name: TemperatureSensor
+    type: Temperature
+    description: A sensor measuring temperature in hotrunner systems
+  flowrate-sensor:
+    name: FlowRateSensor
+    type: FlowRate
+    description: A sensor measuring flow rate in hotrunner systems 
+  pressure-sensor:
+    name: PressureSensor
+    type: Pressure
+    description: A sensor measuring pressure in injection molding systems

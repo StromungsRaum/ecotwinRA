@@ -33,6 +33,9 @@ applications:
     type: HeatSimulation
     description: 
     model: tudo-featflower-heat-model
+    data-bridges:
+      - temperature-sensor
+      - flowrate-sensor
   hotrunner-sensor-genai:
     type: ConstructionAssistant
     description: 
