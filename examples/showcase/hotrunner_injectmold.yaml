@@ -19,7 +19,6 @@ digital_twins:
     sensors:
       - temperature-sensor
       - flowrate-sensor
-
   injectmold-dt:
     name: InjectMoldTwin
     description: A digital twin for the injectmold process based on STEP file upload an a hifi model
