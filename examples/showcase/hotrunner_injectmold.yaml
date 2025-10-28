@@ -45,6 +45,8 @@ applications:
     type: FlowSimulation
     description: 
     model: tuda-flow-model
+    data-bridges:
+      - pressure-sensor
 
 models:
   tudo-featflower-heat-model:
