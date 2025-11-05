@@ -101,7 +101,7 @@ def render_markdown_tree(value):
     help="Directory where generated Markdown files will be written.",
 )
 @click.pass_obj
-def info(twin_info, output_format, root_name, output_dir):
+def command(twin_info, output_format, root_name, output_dir):
     """Display information about the EcoTwin system."""
     fmt = output_format.lower()
     if fmt == "tree":
@@ -224,9 +224,7 @@ def _write_entity(entity_id, context):
         lines.extend(["", description])
 
     remaining = {
-        key: value
-        for key, value in data.items()
-        if key not in {"name", "description"}
+        key: value for key, value in data.items() if key not in {"name", "description"}
     }
 
     if remaining:
