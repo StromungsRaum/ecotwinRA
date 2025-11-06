@@ -1,5 +1,6 @@
 import click
 
+from beeprint import pp
 from loguru import logger
 
 from ecotwin.common.api_connector import (
@@ -24,4 +25,6 @@ def command(twin_info, system):
 
     models = backend_handler.get_models()
 
-    logger.info(f"Models: {models}")
+    logger.info("Models:")
+    for model in models:
+        logger.info(f"\t{model[0]} - {model[1]}")

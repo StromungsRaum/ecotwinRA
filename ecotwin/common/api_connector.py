@@ -1,5 +1,6 @@
 """Script with all the necessary classes/functions to talk to the simod backend."""
 
+import json
 import logging
 import os
 import re
@@ -275,7 +276,17 @@ class BackendHandler:
             logging.info(response.content[:400])
             raise response.raise_for_status()
 
-        return response.content
+        ajax_json = json.loads(response.content)
+
+        data = ajax_json["data"]
+        models = []
+        for item in data:
+            name_en = item["name_en"]
+            name = item["name"]
+            if "Automatisch" in name:
+                models.append((name, name_en))
+
+        return models
 
 
 def _get_credentials_from_env(backend: System):
