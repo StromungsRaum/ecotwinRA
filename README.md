@@ -68,7 +68,7 @@ For programme details and usage guidance, see [Funded By](./docs/funding.md).
 
 - [IANUS Simulation GmbH](https://ianus-simulation.de/)
 - [TU Dortmund University — Institute for Applied Mathematics and Numerics](https://wwwold.mathematik.tu-dortmund.de/lsiii/cms/en/lehrstuhl3.html)
-- [TU Darmstadt](https://www.tu-darmstadt.de/)
+- [TU Darmstadt - Computational Multiphase Flow group](https://www.mathematik.tu-darmstadt.de/cmf/cmf_home/index.de.jsp)
 
 ## License
 
