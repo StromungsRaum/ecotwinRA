@@ -68,6 +68,9 @@ For programme details and usage guidance, see [Funded By](./docs/funding.md).
 
 - [IANUS Simulation GmbH](https://ianus-simulation.de/)
 - [TU Dortmund University — Institute for Applied Mathematics and Numerics](https://wwwold.mathematik.tu-dortmund.de/lsiii/cms/en/lehrstuhl3.html)
+    - [FeatFlower Repo on github.com](https://github.com/rmuenste/FeatFloWer/tree/master)
+    - [FEAT3 Repo on github.com](https://github.com/tudo-math-ls3/feat3)
+    - [MeshHexer on github.com](https://github.com/tudo-math-ls3/MeshHexer)
 - [TU Darmstadt - Computational Multiphase Flow group](https://www.mathematik.tu-darmstadt.de/cmf/cmf_home/index.de.jsp)
 
 ## License
