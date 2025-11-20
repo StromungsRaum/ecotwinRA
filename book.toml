@@ -1,0 +1,16 @@
+[book]
+authors = ["ECOTWIN Team"]
+language = "en"
+src = "docs"
+title = "ECOTWIN Reference Architecture"
+
+[preprocessor]
+
+[preprocessor.mermaid]
+command = "mdbook-mermaid"
+
+[output]
+
+[output.html]
+additional-js = ["public/js/mermaid.min.js", "public/js/mermaid-init.js"]
+additional-css = ["public/css/acc.css"]
