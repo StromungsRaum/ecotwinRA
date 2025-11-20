@@ -15,7 +15,8 @@
 
 ## twinctl
 
-- [twinctl](./twinctl.md)
-  - [Integration to ApeiroRA](./twinctl/capabilities/integration.md)
+- [twinctl](./twinctl/twinctl.md)
+  - [Integration to ApeiroRA](./twinctl/integration.md)
+    - [Integration Diagram](./twinctl/integration-diagram.md)
   - [Operations](./twinctl/capabilities/operations.md)
   - [Provisioning](./twinctl/capabilities/provisioning.md)

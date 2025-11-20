@@ -12,5 +12,5 @@ command = "mdbook-mermaid"
 [output]
 
 [output.html]
-additional-js = ["public/js/mermaid.min.js", "public/js/mermaid-init.js"]
-additional-css = ["public/css/acc.css"]
+additional-js = ["assets/js/mermaid.min.js", "assets/js/mermaid-init.js"]
+additional-css = ["assets/css/acc.css"]
