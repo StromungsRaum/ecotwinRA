@@ -22,9 +22,9 @@ In the second phase a full application will be provided.
 
 The first thing I would think about is creating the operator and what the resource should be that shall be presented in the Platform Mesh and what its fields should be.
 
-[MSP Cluster](../assets/platform_mesh.png)
+![MSP Cluster](../assets/platform_mesh.png)
 
-[Mesh Platform to IANUS Simulation Flow](../assets/platform_mesh_flow.png)
+![Mesh Platform to IANUS Simulation Flow](../assets/platform_mesh_flow.png)
 
 ## Use Case:
 
