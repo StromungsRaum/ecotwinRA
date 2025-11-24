@@ -97,3 +97,127 @@ Composable, simulatable bundle of domains and models representing a system desig
 ## Digital Twin (DT)
 
 Bi-directionally synchronized VP/VR with live data, state estimation, and actuation path.
+
+### Edge-ready Digital Twin
+A cloud-native digital twin that is connected to the cloud's edge, the following additional architectures apply.
+
+#### Data Live cycle
+**Edge Context.** The **OPC UA Server** exposes machine signals; the **Gateway / Publisher** converts them into compact JSON and **publishes** them to the **Broker** using the configured path (e.g., `REST PUBLISH devices/id {ts, seq, value, unit}`). For operator UIs on-site, the gateway can also push a **zero-latency stream** directly to the **Frontend App** for local HMI views.
+
+**StrömungsRaum Backend (Cloud).** The **Broker** decouples producers and consumers and fans out messages reliably. The **Ingest Worker (php-mqtt/client)** **subscribes** to the data topic set (e.g., `MQTT SUBSCRIBE devices/data`), writes rows to the **Data Store (Hypertables • Downsampling)**, and emits live events (`data.tick`) via the **WebSocket Server (WebSockets/Echo)**. The **HTTP API (History + Logs + Auth)** serves historical reads and access-controlled logs from the same data store. **Observability (Logs/Alerts)** monitors ingest, API, and database health end-to-end.
+
+**StrömungsRaum Frontend (Cloud).** The **Application (WebSocket Timeseries / SLV / Dashboard)** **subscribes** to the WebSocket channel (e.g., `ws: sensor.<deviceId>`) for real-time charts and **GETs** history from the API. The same app can also be **deployed/shown on the Edge** when local UX is required.
+
+```mermaid
+flowchart TB
+  subgraph EDGE["Edge Context"]
+    UA["OPC UA Server"]
+    BRG["OPC UA → MQTT Gateway / Publisher"]
+    UA --> BRG
+  end
+
+  subgraph BACKEND["StrömungsRaum Backend (Cloud)"]
+    MQTT["Broker"]
+    ING["Ingest Worker (php-mqtt/client)"]
+    API["HTTP API (History + Logs + Auth)"]
+    WS["WebSocket Server (WebSockets/Echo)"]
+    TSDB["Data (Hypertables • Downsampling)"]
+    O11Y["Observability (Logs/Alerts)"]
+  end
+
+  subgraph FRONTEND["StrömungsRaum Frontend (Cloud)"]
+    VUE["Application (WebSocket Timeseries / SLV / Dashboard)"]
+  end
+
+  %% Flows
+  BRG -- "REST PUBLISH devices/id {ts,seq,value,unit}" --> MQTT
+  ING -- "MQTT SUBSCRIBE devices/data" --> MQTT
+  ING -- "INSERT (device_id, ts, value,…)" --> TSDB
+  ING -- "Broadcast data.tick" --> WS
+  VUE -- "SUBSCRIBE ws: sensor.<deviceId>" --> WS
+  VUE -- "GET /history?deviceId=…" --> API
+  API --> TSDB
+  BRG --"zero latency stream"--> VUE
+```
+
+
+#### Edge-deployed AI model lifecycle
+ assembles the training set. A basic **DoE Planner** (design-of-experiments) triggers **HiFi Simulations (CFD/FEM)** where needed; simulation results loop back to the data store and into **Data Prep**. The **Surrogate Trainer (fit/validate)** produces a model artifact registered in the **Model Registry / Artifact Store**.
+
+**Deployment (Cloud→Edge).** The **Model Deployment Orchestrator** selects a version from the registry and announces roll-out (e.g., `MQTT PUBLISH models/<id>/deploy`). At the edge, the **Surrogate Inference (Edge)** pulls the artifact via the **HTTP API** (`GET /models/<id>/artifact`) and activates it.
+
+**Inference (Edge).** The edge surrogate **subscribes** to the live device topic (e.g., `MQTT SUBSCRIBE devices/data`), performs inference, and **publishes** predictions (e.g., `MQTT PUBLISH predictions/<id> {ts, y_hat, quality}`). The **Ingest Worker** also **subscribes** to predictions, persists them, and broadcasts `pred.tick` over WebSockets so the **Frontend App** can **subscribe** to `ws: prediction.<deviceId>` alongside raw sensor channels. All stages feed **Observability** for metrics and alerts.
+
+
+```mermaid
+flowchart TB
+  subgraph EDGE["Edge Context"]
+    UA["OPC UA Server"]
+    BRG["OPC UA → MQTT Gateway / Publisher"]
+    SUR["Surrogate Inference (Edge)"]
+    UA --> BRG
+  end
+
+  subgraph BACKEND["StrömungsRaum Backend (Cloud)"]
+    MQTT["Broker"]
+    ING["Ingest Worker (php-mqtt/client)"]
+    API["HTTP API (History + Logs + Auth)"]
+    WS["WebSocket Server (WebSockets/Echo)"]
+    TSDB["Data (Hypertables • Downsampling)"]
+    TRAIN["Surrogate Training (Cloud)"]
+    REG["Model Registry / Artifact Store"]
+    DEP["Model Deployment Orchestrator"]
+    O11Y["Observability (Logs/Alerts)"]
+  end
+
+  subgraph FRONTEND["StrömungsRaum Frontend (Cloud)"]
+    VUE["Application (WebSocket Timeseries / SLV / Dashboard)"]
+  end
+
+  %% Telemetry ingest
+  BRG -- "REST/stream PUBLISH devices/id {ts,seq,value,unit}" --> MQTT
+  ING -- "MQTT SUBSCRIBE devices/data" --> MQTT
+  ING -- "INSERT (device_id, ts, value,…)" --> TSDB
+  ING -- "Broadcast data.tick" --> WS
+  VUE -- "SUBSCRIBE ws: sensor.<deviceId>" --> WS
+  VUE -- "GET /history?deviceId=…" --> API
+  API --> TSDB
+
+  %% Surrogate training (cloud)
+  TSDB -- "read training data" --> TRAIN
+  TRAIN -- "register artifact (model, metadata)" --> REG
+
+  %% Deployment cloud -> edge
+  DEP -- "select model" --> REG
+  DEP -- "MQTT PUBLISH models/id/deploy" --> MQTT
+  SUR -- "HTTP GET /models/<id>/artifact" --> API
+  MQTT -- "deploy/update notify" --> SUR
+
+  %% Inference on edge and feedback
+  MQTT -- "MQTT SUBSCRIBE devices/<id>/pressure" --> SUR
+  SUR -- "MQTT PUBLISH predictions/<id> {ts,y_hat,quality}" --> MQTT
+  ING -- "MQTT SUBSCRIBE predictions/+" --> MQTT
+  ING -- "Broadcast pred.tick" --> WS
+  VUE -- "SUBSCRIBE ws: prediction.<deviceId>" --> WS
+
+  %% Cross-cutting
+  TSDB --- O11Y
+  ING --- O11Y
+  API --- O11Y
+  TRAIN --- O11Y
+  DEP --- O11Y
+
+```
+
+#### Roles of the entities (at a glance)
+- **OPC UA Server** — machine interface exposing signals.
+- **Gateway / Publisher** — transforms OPC UA nodes to JSON; publishes to broker; can mirror a zero-latency stream to the frontend.
+- **Broker** — reliable fan-out and decoupling hub for edge→cloud data.
+- **Ingest Worker** — subscribes, persists, and broadcasts (`data.tick` / `pred.tick`).
+- **Data Store (Hypertables • Downsampling)** — time-series storage and history source.
+- **WebSocket Server** — real-time delivery to dashboards and SLV.
+- **HTTP API (History + Logs + Auth)** — secure, audited access to historical data and logs.
+- **Frontend Application** — WebSocket timeseries charts; history retrieval; deployable at cloud or edge.
+- **Training (subgraph)** — Data Prep, DoE Planner, HiFi Simulations, Surrogate Trainer, Model Registry.
+- **Deployment Orchestrator** - selects/announces model versions; coordinates edge updates.
+- **Surrogate Inference (Edge)** — pulls artifacts, subscribes to sensor topics, publishes predictions.
