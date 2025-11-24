@@ -1,0 +1,9 @@
+models:
+  mymodel:
+    name: myFeatflowerHeat
+    description: The HiFi model for my hotrunner stage
+    deployment:
+      location: cloud
+      resources:
+        cpu_min_per_node: 8
+        memory_min_per_noede: 128GB

@@ -1,0 +1,9 @@
+models:
+  hotrunner-heat-hifi:
+    type: HiFi Simulation
+    description: Analysis of heat distribution in hotrunner systems based on the solution of the heat equation in 3D
+    vendor: TU Dortmund, Inst. f. Applied Mathematics
+  hotrunner-lofi-integral-maxtemp:
+    type: Surrogate Model
+    description: Analysis of heat distribution in hotrunner systems based on the solution of a 1D reduced model
+    vendor: IANUS Simulation GmbH

@@ -1,0 +1,7 @@
+models:
+  mymodel:
+    name: myFeatflowerHeat
+    description: The HiFi model for my hotrunner stage
+    deployment:
+      location: jureca_dc
+      status: live

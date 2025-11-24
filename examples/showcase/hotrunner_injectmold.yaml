@@ -55,6 +55,11 @@ models:
     name: FeatflowerHeat
     type: PDESimulation
     description: A hi-fi model for simulating heat distribution in hotrunner systems
+    deployment:
+      location: cloud
+      resources:
+        cpu_min_per_node: 8
+        memory_min_per_noede: 128GB
   ianus-sensorgsp-genai-model:
     name: IANUSSensorGSP
     type: Optimizer
