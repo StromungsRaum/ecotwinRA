@@ -1,6 +1,7 @@
 models:
   mymodel:
     name: myFeatflowerHeat
+    type: tudo-featflower-heat-model
     description: The HiFi model for my hotrunner stage
     deployment:
       location: cloud
