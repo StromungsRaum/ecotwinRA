@@ -5,6 +5,14 @@ During the first phase a basic service from StrömungsRaum will be exposed to Pl
 This service will just list available applications in StrömungsRaum.
 In the second phase a full application will be provided.
 
+## Terminology
+
+KCP
+: Kubernates like control plane [kcp.io](https://kcp.io)
+
+MSP
+: Managed Service Provider
+
 ## Plan
 
 ### IANUS Team Tasks
