@@ -68,6 +68,10 @@ models:
     name: IANUSHePos
     type: OptimizerAgent
     description: A generative AI agent for optimizing heater positions in hotrunner systems
+    deployment:
+      location: edge
+      resources:
+        gpus_min_per_node: 1
   tuda-flow-model:
     name: OpenFAOMFlow
     type: PDESimulation
