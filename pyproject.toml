@@ -12,6 +12,8 @@ dependencies = [
     "beeprint>=2.4.11",
     "click>=8.3.0",
     "pyyaml>=6.0.2",
+    "fastapi>=0.103.0",
+    "uvicorn[standard]>=0.23.2",
 ]
 readme = "README.md"
 
@@ -28,3 +30,4 @@ include = ["ecotwin*"]
 
 [project.scripts]
 twinctl = "ecotwin.twinctl:twinctl"
+ecotwin-api = "ecotwin.api_server:main"
