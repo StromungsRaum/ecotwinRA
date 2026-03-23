@@ -1,4 +1,5 @@
-import click
+import typer
+from typing import Optional
 
 from loguru import logger
 from dotenv import load_dotenv
@@ -9,30 +10,38 @@ from ecotwin.common.twin_config import (
 )
 
 
-@click.command(help="Store login information for the Twin system")
-@click.option(
-    "--system",
-    "system",
-    type=click.Choice(System, case_sensitive=False),  # type: ignore
-    help=("System"),
-)
-@click.option(
-    "--email",
-    "email",
-    type=click.STRING,
-    envvar=["SR_USERNAME", "USERNAME"],
-    help=("User email"),
-)
-@click.option(
-    "--pass",
-    "password",
-    type=click.STRING,
-    envvar=["SR_PASSWORD", "PASSWORD"],
-    help=("User password"),
-)
-@click.pass_obj
-def store(twin_info, system, email, password):
-    logger.info(f"Using system: {system.value}")
+app = typer.Typer(help="Login to StrömungsRaum", pretty_exceptions_enable=False)
+
+
+@app.callback(invoke_without_command=False)
+def login_callback(ctx: typer.Context) -> None:
+    """Login to the EcoTwin system."""
+    pass
+
+
+@app.command("store")
+def store_command(
+    system: Optional[System] = typer.Option(
+        None,
+        "--system",
+        help="System",
+    ),
+    email: Optional[str] = typer.Option(
+        None,
+        "--email",
+        envvar=["SR_USERNAME", "USERNAME"],
+        help="User email",
+    ),
+    password: Optional[str] = typer.Option(
+        None,
+        "--pass",
+        envvar=["SR_PASSWORD", "PASSWORD"],
+        help="User password",
+    ),
+) -> None:
+    """Store login information for the Twin system."""
+    if system:
+        logger.info(f"Using system: {system.value}")
 
     dot_env_path = get_env_file_path()
     if dot_env_path.exists():

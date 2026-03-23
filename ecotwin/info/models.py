@@ -1,6 +1,6 @@
-import click
+import typer
+from typing import Optional
 
-from beeprint import pp
 from loguru import logger
 
 from ecotwin.common.api_connector import (
@@ -9,16 +9,14 @@ from ecotwin.common.api_connector import (
 from ecotwin.common.system import System
 
 
-@click.command(help="Get information about StrömungsRaum models")
-@click.option(
-    "--system",
-    "system",
-    type=click.Choice(System, case_sensitive=False),  # type: ignore
-    default=System.INT,
-    help=("System"),
-)
-@click.pass_obj
-def command(twin_info, system):
+def models_command(
+    system: System = typer.Option(
+        System.INT,
+        "--system",
+        help="System",
+    ),
+) -> None:
+    """Get information about StrömungsRaum models."""
     logger.info("Get information about models")
 
     backend_handler = create_api_connector(system)

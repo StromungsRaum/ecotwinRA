@@ -1,9 +1,15 @@
 from pathlib import Path
 import re
+from typing import Optional, Literal
 
-import click
+import typer
 from beeprint import pp
 import yaml
+from loguru import logger
+
+from ecotwin.common.app_context import get_twin_info
+from ecotwin.common.twin_config import read_twin_yaml
+from ecotwin.common.app_context import set_twin_info
 
 
 def _format_tree(value, indent=0):
@@ -71,60 +77,70 @@ def render_markdown_tree(value):
     return "\n".join(_format_markdown_tree(value))
 
 
-@click.command(help="Information about the Twin system")
-@click.option(
-    "--format",
-    "output_format",
-    type=click.Choice(
-        ["raw", "tree", "markdown-tree", "markdown-files"], case_sensitive=False
+def system_command(
+    file: Optional[str] = typer.Option(
+        None,
+        "--file",
+        help="YAML file to use",
     ),
-    default="raw",
-    show_default=True,
-    help=(
-        "Select raw beeprint output, tree hierarchy view, Markdown tree, "
-        "or generate Markdown files."
+    output_format: Literal[
+        "raw", "tree", "markdown-tree", "markdown-files"
+    ] = typer.Option(
+        "raw",
+        "--format",
+        help="Select raw beeprint output, tree hierarchy view, Markdown tree, or generate Markdown files.",
     ),
-)
-@click.option(
-    "--root-name",
-    type=str,
-    help="Name of the root Markdown document when generating files.",
-)
-@click.option(
-    "--output-dir",
-    type=click.Path(
-        file_okay=False,
-        dir_okay=True,
-        resolve_path=True,
-        path_type=Path,
+    root_name: Optional[str] = typer.Option(
+        None,
+        "--root-name",
+        help="Name of the root Markdown document when generating files.",
     ),
-    help="Directory where generated Markdown files will be written.",
-)
-@click.pass_obj
-def command(twin_info, output_format, root_name, output_dir):
+    output_dir: Optional[Path] = typer.Option(
+        None,
+        "--output-dir",
+        help="Directory where generated Markdown files will be written.",
+    ),
+) -> None:
     """Display information about the EcoTwin system."""
+    # Get twin_info from app context
+
+    config_file = Path(file) if file else Path("twin.yaml")
+    if config_file.exists():
+        logger.info(f"Using config file: {config_file}")
+
+        # Store twin info in app context for subcommands to access
+        twin_info = read_twin_yaml(config_file)
+        set_twin_info(twin_info)
+
+    twin_info = get_twin_info()
+
+    if not twin_info:
+        typer.echo("Error: twin_info not available", err=True)
+        raise typer.Exit(code=1)
+
     fmt = output_format.lower()
     if fmt == "tree":
-        click.echo("EcoTwin System Information (tree):")
-        click.echo(render_tree(twin_info.config))
+        typer.echo("EcoTwin System Information (tree):")
+        typer.echo(render_tree(twin_info.config))
     elif fmt == "markdown-tree":
-        click.echo("EcoTwin System Information (markdown tree):")
-        click.echo(render_markdown_tree(twin_info.config))
+        typer.echo("EcoTwin System Information (markdown tree):")
+        typer.echo(render_markdown_tree(twin_info.config))
     elif fmt == "markdown-files":
         if not root_name:
-            raise click.BadParameter(
-                "root name is required when using markdown-files format.",
-                param_hint="--root-name",
+            typer.echo(
+                "Error: --root-name is required when using markdown-files format.",
+                err=True,
             )
+            raise typer.Exit(code=1)
         target_dir = output_dir or Path.cwd()
         root_path = generate_markdown_files(
             twin_info.config,
             root_name=root_name,
             output_dir=target_dir,
         )
-        click.echo(f"Generated Markdown hierarchy rooted at {root_path}")
+        typer.echo(f"Generated Markdown hierarchy rooted at {root_path}")
     else:
-        click.echo("EcoTwin System Information:")
+        typer.echo("EcoTwin System Information:")
         pp(twin_info.config, indent=4)
 
 
@@ -209,7 +225,7 @@ def _write_entity(entity_id, context):
 
     entity = context["registry"].get(entity_id)
     if not entity:
-        click.echo(f"Warning: entity '{entity_id}' not defined.")
+        typer.echo(f"Warning: entity '{entity_id}' not defined.")
         return None
 
     data = entity["data"]

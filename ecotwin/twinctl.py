@@ -3,7 +3,7 @@
 # requires-python = ">=3.11"
 # dependencies = [
 #     "beeprint",
-#     "click",
+#     "typer[all]",
 #     "dotenv",
 #     "ecotwin",
 #     "loguru",
@@ -17,39 +17,59 @@
 # ecotwin = { path = "../", editable = true }
 # ///
 
-from webbrowser import get
-import click
+import typer
 
-from pathlib import Path
-from ecotwin.common.lazy_group import LazyGroup
-from ecotwin.common.twin_config import read_twin_yaml
-from loguru import logger
+from ecotwin.common.lazy_typer_group import LazyTyperGroup
 from ecotwin.common.logging import prepare_logger
 
-
-@click.group(
-    cls=LazyGroup,
-    lazy_subcommands={
-        "info": "ecotwin.info.group.command",
-        "login": "ecotwin.login.group.command",
-    },
+# Create the main app
+app = typer.Typer(
     help="Twin Control",
+    context_settings={"help_option_names": ["-h", "--help"]},
+    pretty_exceptions_short=True,
+    pretty_exceptions_enable=False,
 )
-@click.version_option(package_name="ecotwin")
-@click.option("--file", help="YAML file to use", type=click.Path(exists=True))
-@click.pass_context
-def twinctl(ctx, file):
+
+
+def version_callback(value: bool) -> None:
+    """Handle --version flag."""
+    if value:
+        try:
+            from importlib.metadata import version
+
+            typer.echo(f"ecotwin, version {version('ecotwin')}")
+        except Exception:
+            typer.echo("ecotwin, version unknown")
+        raise typer.Exit()
+
+
+@app.callback()
+def main(
+    version: bool = typer.Option(
+        None,
+        "--version",
+        callback=version_callback,
+        is_eager=True,
+        help="Show version and exit",
+    ),
+) -> None:
     """EcoTwin Twin Control CLI."""
-    prepare_logger()
 
-    if file is not None:
-        file = Path(file)
-    else:
-        file = Path("twin.yaml")
-    logger.info(f"Using config file: {file}")
 
-    ctx.obj = read_twin_yaml(file)
+# Create lazy loader for subcommands
+lazy_loader = LazyTyperGroup(
+    app,
+    lazy_subcommands={
+        "info": "ecotwin.info.group.app",
+        "login": "ecotwin.login.store.app",
+    },
+)
+
+# Eagerly load subcommands to ensure they're added
+lazy_loader.load_all()
 
 
 if __name__ == "__main__":
-    twinctl()
+    prepare_logger()
+
+    app()
