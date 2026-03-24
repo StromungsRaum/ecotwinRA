@@ -64,6 +64,27 @@ The controller will be use the twin information to make sure that dependent tool
 
 Twin controller is further documented in [twinctl](./docs/twinctl.md).
 
+## Digital Twin API
+
+To build the ECOTWIN api server use the following:
+
+```shell
+docker build -t ecotwin-api .
+```
+
+In order for the api to connect to the IANUS backend update the **.env**.
+A template **.env.template** is provided:
+
+```shell
+cp .env.template .env
+```
+
+To run the ECOTWIN api server use the following:
+
+```shell
+docker run --env-file .env -p 8000:8000 ecotwin-api
+```
+
 ## Funding
 
 For programme details and usage guidance, see [Funded By](./docs/funding.md).

@@ -1,6 +1,7 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
-from pathlib import Path
 
 from ecotwin.common.api_connector import (
     create_api_connector,
