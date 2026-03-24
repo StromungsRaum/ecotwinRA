@@ -2,6 +2,7 @@ import os
 
 from enum import Enum
 from pathlib import Path
+from loguru import logger
 
 
 class System(str, Enum):
@@ -22,12 +23,15 @@ def is_valid_system(system: str) -> bool:
         return False
 
 
-def get_env_file_path() -> Path:
+def get_env_file_path() -> Path | None:
 
     if "HOME" not in os.environ:
-        raise ValueError("HOME environment variable is not set")
+        logger.warning("HOME environment variable is not set")
+        return None
+
     user_folder = Path(os.environ["HOME"])
-
     dot_env_file = user_folder / ".config" / "ecotwin" / ".env"
+    if dot_env_file.exists():
+        return dot_env_file
 
-    return dot_env_file
+    return None

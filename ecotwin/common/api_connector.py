@@ -1,7 +1,7 @@
 """Script with all the necessary classes/functions to talk to the simod backend."""
 
 import json
-import logging
+from loguru import logger
 import os
 import re
 from typing import Dict, Optional
@@ -82,21 +82,21 @@ class BackendConnector:
 
         # self.session.headers['X-CSFR-TOKEN'] = csrf_token
 
-        respone = self.session.post(
+        response = self.session.post(
             self.url + "/login",
             data=login_data,
             verify=self.verify,
             proxies=self.proxies,
         )
 
-        if respone.status_code != 200:
-            logging.error(f"code: {respone.status_code}")
-            logging.info(respone.content[:400])
-            raise respone.raise_for_status()
+        if response.status_code != 200:
+            logger.error(f"code: {response.status_code}")
+            logger.info(response.content[:400])
+            response.raise_for_status()
 
         # print(r.headers)
         # print(r.cookies)
-        logging.info("Login passed")
+        logger.info("Login passed")
         # token = r.json()['success']['token']
         # bearerToken = "Bearer "+token
         # self.session.headers.update({'Authorization' : bearerToken})
@@ -107,7 +107,7 @@ class BackendConnector:
         #       verify=self.verify, proxies=self.proxies)
         # print(self.session.headers)
         # print(self.session.cookies)
-        # logging.info("Test")
+        # logger.info("Test")
         # r = self.get('/admin/dashboard')
         # print(self.session.cookies)
         # print(r.cookies)
@@ -124,7 +124,7 @@ class BackendConnector:
         Returns:
             _type_ -- The response.
         """
-        # logging.debug("HEADER: {}".format(self.headers))
+        # logger.debug("HEADER: {}".format(self.headers))
         return self.session.get(
             url=self.url + api_path,
             verify=self.verify,
@@ -146,7 +146,7 @@ class BackendConnector:
         Returns:
             _type_ -- The response.
         """
-        # logging.debug("HEADER: {}".format(self.headers))
+        # logger.debug("HEADER: {}".format(self.headers))
         return self.session.get(
             self.url + api_path,
             json=data,
@@ -173,7 +173,7 @@ class BackendConnector:
         Returns:
             _type_ -- The response.
         """
-        logging.debug(f"POST: {self.url+api_path}")
+        logger.debug(f"POST: {self.url+api_path}")
         # print(self.session.headers)
         # print(self.session.cookies)
         headers = {}  # self.headers.copy()
@@ -221,9 +221,9 @@ class BackendConnector:
             api_path {str} -- Api path.
 
         Returns:
-            _type_ -- The respone.
+            _type_ -- The response.
         """
-        # logging.debug("PUT: {}".format(self.url+api_name))
+        # logger.debug("PUT: {}".format(self.url+api_name))
         return self.session.put(
             self.url + api_path,
             verify=self.verify,
@@ -243,9 +243,9 @@ class BackendConnector:
             data {_type_} -- The json data.
 
         Returns:
-            _type_ -- The respone.
+            _type_ -- The response.
         """
-        # logging.debug("PUT: {}".format(self.url+api_name))
+        # logger.debug("PUT: {}".format(self.url+api_name))
         return self.session.put(
             self.url + api_path,
             json=data,
@@ -271,9 +271,9 @@ class BackendHandler:
 
         if response.status_code != 200:
             if response.status_code == 302:
-                logging.error("Tries to redirect back to login")
+                logger.error("Tries to redirect back to login")
                 raise ValueError("Bad login credentials.")
-            logging.info(response.content[:400])
+            logger.info(response.content[:400])
             raise response.raise_for_status()
 
         ajax_json = json.loads(response.content)
@@ -294,12 +294,12 @@ def _get_credentials_from_env(backend: System):
     email_system_key = f"EMAIL_{backend.upper()}"
     if email_system_key not in os.environ and "EMAIL" not in os.environ:
         raise ValueError(
-            f"Couldn't retrive credentials from env as EMAIL or {email_system_key} is missing."
+            f"Couldn't retrieve credentials from env as EMAIL or {email_system_key} is missing."
         )
     passwd_system_key = f"PASSWD_{backend.upper()}"
     if passwd_system_key not in os.environ and "PASSWD" not in os.environ:
         raise ValueError(
-            "Couldn't retrive credentials from env as PASSWD or PASSWD_<system> is missing."
+            "Couldn't retrieve credentials from env as PASSWD or PASSWD_<system> is missing."
         )
     return {
         "email": (
@@ -343,12 +343,12 @@ def create_api_connector(
     Returns:
         BackendHandler -- The connected BackendHandler.
     """
-    logging.info(f"Connecting to backend: {backend}")
-    dot_env_path = get_env_file_path()
-    if not dot_env_path.exists():
-        raise FileNotFoundError(f"Please store credentials {dot_env_path}")
+    logger.info(f"Connecting to backend: {backend}")
 
-    load_dotenv(dot_env_path, interpolate=True)
+    dot_env_path = get_env_file_path()
+    if dot_env_path is not None:
+        logger.info(f"Please store credentials {dot_env_path}")
+        load_dotenv(dot_env_path, interpolate=True)
 
     credentials = _get_credentials_from_env(backend=backend)
 
