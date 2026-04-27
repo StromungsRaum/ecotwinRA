@@ -14,7 +14,7 @@
 # ]
 #
 # [tool.uv.sources]
-# ecotwin = { path = "../", editable = true }
+# ecotwin = { path = "../../", editable = true }
 # ///
 
 import typer

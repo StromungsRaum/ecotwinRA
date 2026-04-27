@@ -1,0 +1,37 @@
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIResourceSchema
+metadata:
+  # The name usually follows the format: <plural>.<group>
+  name: v1alpha1.model.ecotwin.ianus-simulation.de
+spec:
+  group: ecotwin.ianus-simulation.de
+  names:
+    kind: Model
+    plural: models
+    singular: model
+    shortNames:
+      - mdl
+  scope: Namespaced # Or "Cluster"
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                intent:
+                  type: string
+                bullets:
+                  type: integer
+                  minimum: 0
+              required:
+                - intent
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
