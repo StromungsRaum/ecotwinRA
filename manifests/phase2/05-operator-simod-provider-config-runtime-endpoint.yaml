@@ -1,0 +1,19 @@
+# Purpose: Configures the ecotwin-operator with the SIMOD base URL and InjectMold execution endpoint.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ecotwin-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: simod-provider-config
+  namespace: ecotwin-system
+data:
+  SIMOD_BASE_URL: "https://www.simod.de"
+  SIMOD_DEFAULT_MODEL: "injectmold"
+  SIMOD_MODEL_CLASS: "high-fidelity-simulation"
+  SIMOD_DOMAIN: "injection-molding"
+  SIMOD_INJECTMOLD_EXECUTION_PATH: "/api/models/injectmold/runs"
+  SIMOD_INJECTMOLD_STATUS_PATH_TEMPLATE: "/api/models/injectmold/runs/{runId}"
+  SIMOD_INJECTMOLD_RESULT_BASE_URL: "https://www.simod.de/results"

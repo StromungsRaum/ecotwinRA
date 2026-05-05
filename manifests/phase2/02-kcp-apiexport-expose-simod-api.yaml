@@ -1,0 +1,6 @@
+# Purpose: Exposes the simod.de API group through kcp / Platform Mesh.
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIExport
+metadata:
+  name: simod.de
+spec: {}

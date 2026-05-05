@@ -1,0 +1,41 @@
+# Purpose: Example simod.de user order for running the InjectMold high-fidelity injection-molding simulation.
+apiVersion: simod.de/v1alpha1
+kind: Model
+metadata:
+  name: injectmold-run-001
+  namespace: demo-workspace
+  labels:
+    app.kubernetes.io/part-of: simod
+    simod.de/portfolio-item: injectmold
+    simod.de/domain: injection-molding
+spec:
+  portfolioItemRef:
+    name: injectmold
+    version: v1
+
+  modelClass: high-fidelity-simulation
+  domain: injection-molding
+
+  modelDataRef:
+    type: http
+    url: "https://www.simod.de/models/injectmold/run-001/input-package.tar.gz"
+    checksum: sha256:REPLACE_ME
+
+  parameters:
+    material: "PP"
+    meltTemperatureCelsius: 230
+    moldTemperatureCelsius: 45
+    injectionPressureBar: 850
+    injectionTimeSeconds: 1.2
+    holdingPressureBar: 600
+    holdingTimeSeconds: 8.0
+    coolingTimeSeconds: 20.0
+    meshResolution: "high"
+
+  output:
+    baseUrl: "https://www.simod.de/results"
+    prefix: "injectmold-run-001"
+
+  runtime:
+    priority: normal
+    maxDurationSeconds: 14400

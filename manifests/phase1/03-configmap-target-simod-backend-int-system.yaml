@@ -1,0 +1,15 @@
+# Purpose: Configure the simod.de backend endpoints used by the ECOTWIN API service.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: simod-backend-config
+  namespace: simod-system
+  labels:
+    app.kubernetes.io/name: ecotwin-api
+    app.kubernetes.io/part-of: ecotwin
+    simod.de/backend: int
+data:
+  BACKEND_URL_INT: "https://backend.int.simod.de"
+  BACKEND_URL_PROD: "https://backend.simod.de"
+  BACKEND_URL_TEST: "https://backend.test.simod.de"
+  BACKEND_URL_DEV: "https://backend.dev.simod.de"

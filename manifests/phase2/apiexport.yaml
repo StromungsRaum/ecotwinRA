@@ -1,0 +1,17 @@
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIExport
+metadata:
+  name: ecotwin.ianus-simulation.de
+spec:
+  # References the specific APIResourceSchema(s) to be exported
+  latestResourceSchemas:
+    - v1alpha1.model.ecotwin.ianus-simulation.de
+
+  # Optional: Define permissions for consumers binding to this API
+  maximalPermissionPolicy:
+    local:
+      clusterRole:
+        rules:
+          - apiGroups: ["ecotwin.ianus-simulation.de"]
+            resources: ["models"]
+            verbs: ["get"]

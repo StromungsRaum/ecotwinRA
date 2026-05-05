@@ -1,0 +1,21 @@
+# Purpose: Documentation/test fixture showing the expected completed status for an InjectMold run.
+status:
+  phase: Completed
+  conditions:
+    - type: Completed
+      status: "True"
+      reason: ExecutionSucceeded
+      message: "InjectMold high-fidelity simulation completed successfully"
+      lastTransitionTime: "2026-04-30T10:58:12Z"
+  simodRunId: "simod-injectmold-job-7d8f9a2b"
+  startTime: "2026-04-30T10:16:45Z"
+  completionTime: "2026-04-30T10:58:12Z"
+  durationSeconds: 2487
+  progress:
+    percentComplete: 100
+    message: "Simulation finished: results available via HTTPS"
+  results:
+    reportUrl: "https://www.simod.de/results/injectmold-run-001/report.html"
+    dataUrl: "https://www.simod.de/results/injectmold-run-001/simulation-data.vtk"
+    visualizationUrl: "https://www.simod.de/results/injectmold-run-001/visualization.mp4"
+    credentialsSecretName: "injectmold-run-001-results"

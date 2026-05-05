@@ -1,0 +1,9 @@
+# Purpose: Create the namespace that hosts the simod.de ECOTWIN API service.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: simod-system
+  labels:
+    app.kubernetes.io/part-of: ecotwin
+    app.kubernetes.io/managed-by: kubectl
+    simod.de/scope: platform-mesh-integration

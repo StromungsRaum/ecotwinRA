@@ -1,0 +1,190 @@
+# Purpose: Defines the public simod.de Model CRD for declarative InjectMold high-fidelity runs.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: models.simod.de
+spec:
+  group: simod.de
+  scope: Namespaced
+  names:
+    kind: Model
+    plural: models
+    singular: model
+    shortNames:
+      - mdl
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Progress
+          type: number
+          jsonPath: .status.progress.percentComplete
+        - name: PortfolioItem
+          type: string
+          jsonPath: .spec.portfolioItemRef.name
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - portfolioItemRef
+                - modelClass
+                - domain
+                - modelDataRef
+                - parameters
+                - output
+              properties:
+                portfolioItemRef:
+                  type: object
+                  required:
+                    - name
+                  properties:
+                    name:
+                      type: string
+                      enum:
+                        - injectmold
+                    version:
+                      type: string
+                      default: v1
+                modelClass:
+                  type: string
+                  enum:
+                    - high-fidelity-simulation
+                    - surrogate-model
+                    - optimization-model
+                domain:
+                  type: string
+                  enum:
+                    - injection-molding
+                    - extrusion
+                    - pump
+                    - generic-cfd
+                modelDataRef:
+                  type: object
+                  required:
+                    - type
+                    - url
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                        - http
+                        - oci
+                    url:
+                      type: string
+                      pattern: "^https?://"
+                    checksum:
+                      type: string
+                parameters:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                output:
+                  type: object
+                  required:
+                    - baseUrl
+                    - prefix
+                  properties:
+                    baseUrl:
+                      type: string
+                      pattern: "^https?://"
+                    prefix:
+                      type: string
+                      minLength: 1
+                runtime:
+                  type: object
+                  properties:
+                    priority:
+                      type: string
+                      enum:
+                        - low
+                        - normal
+                        - high
+                      default: normal
+                    maxDurationSeconds:
+                      type: integer
+                      minimum: 1
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum:
+                    - Pending
+                    - Accepted
+                    - Running
+                    - Completed
+                    - Failed
+                    - Cancelled
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                simodRunId:
+                  type: string
+                startTime:
+                  type: string
+                  format: date-time
+                completionTime:
+                  type: string
+                  format: date-time
+                durationSeconds:
+                  type: integer
+                progress:
+                  type: object
+                  properties:
+                    currentStep:
+                      type: integer
+                    totalSteps:
+                      type: integer
+                    percentComplete:
+                      type: number
+                      minimum: 0
+                      maximum: 100
+                    message:
+                      type: string
+                results:
+                  type: object
+                  properties:
+                    reportUrl:
+                      type: string
+                      pattern: "^https?://"
+                    dataUrl:
+                      type: string
+                      pattern: "^https?://"
+                    visualizationUrl:
+                      type: string
+                      pattern: "^https?://"
+                    credentialsSecretName:
+                      type: string

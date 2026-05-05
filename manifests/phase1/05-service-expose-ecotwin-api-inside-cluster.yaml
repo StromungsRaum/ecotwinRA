@@ -1,0 +1,19 @@
+# Purpose: Expose the ECOTWIN API service internally for operators, sync agents, or test clients.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ecotwin-api
+  namespace: simod-system
+  labels:
+    app.kubernetes.io/name: ecotwin-api
+    app.kubernetes.io/component: portfolio-declaration-service
+    app.kubernetes.io/part-of: ecotwin
+    simod.de/service: portfolio-declaration-api
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: ecotwin-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

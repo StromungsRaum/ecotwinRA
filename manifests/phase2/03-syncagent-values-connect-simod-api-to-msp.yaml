@@ -1,0 +1,7 @@
+# Purpose: Helm values template for connecting the MSP-side api-syncagent to the simod.de APIExport.
+agentName: simod-injectmold-syncagent
+apiExportName: simod.de
+kcpKubeconfig: kcp-kubeconfig
+
+# Optional depending on your concrete api-syncagent release and APIExport endpoint discovery.
+# apiExportEndpointSliceName: simod.de
