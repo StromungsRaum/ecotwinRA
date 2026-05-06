@@ -1,0 +1,130 @@
+apiVersion: ui.platform-mesh.io/v1alpha1
+kind: ContentConfiguration
+metadata:
+  labels:
+    ui.platform-mesh.io/entity: core_platform-mesh_io_account
+    ui.platform-mesh.io/content-for: orchestrate.platform-mesh.io
+  name: simod-ui
+spec:
+  inlineConfiguration:
+    content: |-
+      {
+          "name": "simod",
+          "creationTimestamp": "2022-05-17T11:37:17Z",
+          "luigiConfigFragment": {
+              "data": {
+                  "nodes": [
+                      {
+                          "pathSegment": "orchestrate_platform-mesh_io_simod",
+                          "navigationContext": "orchestrate_platform-mesh_io_simod",
+                          "label": "IANUS Simod",
+                          "icon": "paint-bucket",
+                          "order": 800,
+                          "entityType": "main.core_platform-mesh_io_account",
+                          "loadingIndicator": {
+                              "enabled": false
+                          },
+                          "keepSelectedForChildren": true,
+                          "url": "/assets/platform-mesh-portal-ui-wc.js#generic-list-view",
+                          "webcomponent": {
+                              "selfRegistered": true
+                          },
+                          "context": {
+                              "resourceDefinition": {
+                                  "apiGroup": "orchestrate_platform_mesh_io",
+                                  "entityCollection": "Simod",
+                                  "version": "v1alpha1",
+                                  "entity": "Simod",
+                                  "scope": "Namespaced",
+                                  "namespace": null,
+                                  "readyCondition": {
+                                    "jsonPathExpression": "status.ready",
+                                    "property": ["status.ready"]
+                                  },
+                                  "ui": {
+                                      "logoUrl": "https://www.kcp.io/icons/logo.svg",
+                                      "listView": {
+                                          "fields": [
+                                              {
+                                                  "label": "Name",
+                                                  "property": "metadata.name"
+                                              },
+                                              {
+                                                  "label": "Ready",
+                                                  "property": "status.ready",
+                                                  "uiSettings": {
+                                                    "displayAs": "boolIcon"
+                                                  }
+                                              },
+                                              {
+                                                  "label": "Link",
+                                                  "property": "status.url",
+                                                  "uiSettings": {
+                                                    "displayAs": "link"
+                                                  }
+                                              }
+                                          ]
+                                      },
+                                      "detailView": {
+                                        "fields": [
+                                          {
+                                            "label": "Name",
+                                            "property": "metadata.name"
+                                          }
+                                        ]
+                                      },
+                                      "createView": {
+                                          "fields": [
+                                              {
+                                                  "label": "Name",
+                                                  "property": "metadata.name",
+                                                  "required": true
+                                              }
+                                          ]
+                                      }
+                                  }
+                              }
+                          },
+                          "children": [
+                            {
+                                "pathSegment": ":simodId",
+                                "hideFromNav": true,
+                                "keepSelectedForChildren": false,
+                                "defineEntity": {
+                                    "id": "orchestrate_platform-mesh_io_simod",
+                                    "contextKey": "simodId",
+                                    "graphqlEntity": {
+                                        "group": "orchestrate_platform-mesh_io",
+                                        "version": "v1alpha1",
+                                        "kind": "Simod",
+                                        "query": "{ metadata { name } }"
+                                    }
+                                },
+                                "context": {
+                                    "accountId": ":accountId",
+                                    "simodId": ":simodId",
+                                    "resourceId": ":simodId"
+                                }
+                            }
+                          ]
+                      },
+                      {
+                        "entityType": "main.core_platform-mesh_io_account.orchestrate_platform-mesh_io_simod",
+                        "pathSegment": "dashboard",
+                        "label": "Dashboard",
+                        "url": "/assets/platform-mesh-portal-ui-wc.js#generic-detail-view",
+                        "webcomponent": {
+                          "selfRegistered": true
+                        },
+                        "defineEntity": {
+                            "id": "dashboard"
+                        },
+                        "compound": {
+                            "children": []
+                        }
+                      }
+                  ]
+              }
+          }
+      }
+    contentType: json
