@@ -26,7 +26,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
-	"github.com/platform-mesh/provider-quickstart/pkg/bootstrap"
+	"github.com/StromungsRaum/ecotwinRA/pkg/bootstrap"
 )
 
 func main() {

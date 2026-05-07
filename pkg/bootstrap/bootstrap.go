@@ -46,9 +46,9 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/yaml"
 
-	configcontroller "github.com/platform-mesh/provider-quickstart/config/controller"
-	configkcp "github.com/platform-mesh/provider-quickstart/config/kcp"
-	configprovider "github.com/platform-mesh/provider-quickstart/config/provider"
+	configcontroller "github.com/StromungsRaum/ecotwinRA/config/controller"
+	configkcp "github.com/StromungsRaum/ecotwinRA/config/kcp"
+	configprovider "github.com/StromungsRaum/ecotwinRA/config/provider"
 )
 
 // Bootstrap creates all provider resources from embedded YAML files.
@@ -112,7 +112,7 @@ func createControllerKubeconfigSecret(ctx context.Context, client kubernetes.Int
 	// Wait for the service account token secret to be populated
 	var tokenSecret *corev1.Secret
 	err := wait.PollUntilContextTimeout(ctx, time.Second, 30*time.Second, true, func(ctx context.Context) (bool, error) {
-		secret, err := client.CoreV1().Secrets("default").Get(ctx, "wildwest-controller-token", metav1.GetOptions{})
+		secret, err := client.CoreV1().Secrets("default").Get(ctx, "ianus-controller-token", metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				logger.V(2).Info("waiting for service account token secret to be created")
@@ -176,7 +176,7 @@ func createControllerKubeconfigSecret(ctx context.Context, client kubernetes.Int
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "wildwest-controller-kubeconfig",
+			Name:      "ianus-controller-kubeconfig",
 			Namespace: "default",
 		},
 		Type: corev1.SecretTypeOpaque,

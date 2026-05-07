@@ -40,8 +40,8 @@ GOMOD = $(GOCMD) mod
 GOFMT = $(GOCMD) fmt
 
 # Binary names
-BINARY_NAME = wild-west
-INIT_BINARY_NAME = wild-west-init
+BINARY_NAME = ianus
+INIT_BINARY_NAME = ianus-init
 
 # Build directory
 BUILD_DIR = bin
@@ -64,20 +64,20 @@ all: build
 .PHONY: build
 build: build-operator build-init
 
-## build-operator: Build the wild-west operator binary
+## build-operator: Build the ianus operator binary
 .PHONY: build-operator
 build-operator: fmt vet
-	$(GOBUILD) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/wild-west/...
+	$(GOBUILD) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/ianus/...
 
 ## build-init: Build the init/bootstrap binary
 .PHONY: build-init
 build-init: fmt vet
 	$(GOBUILD) -o $(BUILD_DIR)/$(INIT_BINARY_NAME) ./cmd/init/...
 
-## run: Run the wild-west operator locally
+## run: Run the ianus operator locally
 .PHONY: run
 run: fmt vet
-	$(GORUN) ./cmd/wild-west/main.go --endpointslice=wildwest.platform-mesh.io
+	$(GORUN) ./cmd/ianus/main.go --endpointslice=ianus.platform-mesh.io
 
 ## init: Bootstrap provider resources into workspace (requires KUBECONFIG, optional HOST_OVERRIDE)
 HOST_OVERRIDE ?=
@@ -168,14 +168,14 @@ portal-run:
 ## portal-run-detached: Run portal container in background
 .PHONY: portal-run-detached
 portal-run-detached:
-	docker run -d --rm --name wildwest-portal -p $(PORTAL_PORT):80 $(PORTAL_IMAGE)
+	docker run -d --rm --name ianus-portal -p $(PORTAL_PORT):80 $(PORTAL_IMAGE)
 	@echo "Portal running at http://localhost:$(PORTAL_PORT)"
-	@echo "Stop with: docker stop wildwest-portal"
+	@echo "Stop with: docker stop ianus-portal"
 
 ## portal-stop: Stop the portal container
 .PHONY: portal-stop
 portal-stop:
-	docker stop wildwest-portal
+	docker stop ianus-portal
 
 ## tools: Install all required tools
 .PHONY: tools

@@ -1,0 +1,76 @@
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIResourceSchema
+metadata:
+  name: v260506-995936a.models.ianus.platform-mesh.io
+spec:
+  group: ianus.platform-mesh.io
+  names:
+    kind: Model
+    listKind: ModelList
+    plural: models
+    singular: model
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .spec.intent
+          name: Intent
+          type: string
+        - jsonPath: .status.result
+          name: Result
+          type: string
+      name: v1alpha1
+      schema:
+        description: Model is the Schema for the models API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ModelSpec defines the desired state of Model
+            properties:
+              intent:
+                description: Intent is the desired action for the model
+                type: string
+              secretRefs:
+                description:
+                  SecretRefs is an array of references to Secrets containing
+                  model credentials
+                items:
+                  description:
+                    SecretReference references a Secret by name in the same
+                    namespace as the Model.
+                  properties:
+                    name:
+                      description: Name of the referenced Secret
+                      type: string
+                  required:
+                    - name
+                  type: object
+                type: array
+            type: object
+          status:
+            description: ModelStatus defines the observed state of Model
+            properties:
+              result:
+                description: Result is the outcome of the model's action
+                type: string
+            type: object
+        type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

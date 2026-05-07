@@ -1,14 +1,14 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: wildwest-controller
+  name: ianus-controller
 rules:
-  # Full access to Cowboys resources
-  - apiGroups: ["wildwest.platform-mesh.io"]
-    resources: ["cowboys"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["wildwest.platform-mesh.io"]
-    resources: ["cowboys/status"]
+  # Full access to Models resources
+  - apiGroups: ["ianus.platform-mesh.io"]
+    resources: ["models"]
+    verbs: ["list"]
+  - apiGroups: ["ianus.platform-mesh.io"]
+    resources: ["models/status"]
     verbs: ["get", "update", "patch"]
   # Events
   - apiGroups: [""]

@@ -3,20 +3,20 @@ kind: ContentConfiguration
 metadata:
   labels:
     ui.platform-mesh.io/entity: core_platform-mesh_io_account
-    ui.platform-mesh.io/content-for: wildwest.platform-mesh.io
-  name: cowboys-ui
+    ui.platform-mesh.io/content-for: ianus.platform-mesh.io
+  name: models-ui
 spec:
   inlineConfiguration:
     content: |-
       {
-          "name": "cowboys",
+          "name": "models",
           "luigiConfigFragment": {
               "data": {
                   "nodes": [
                       {
-                          "pathSegment": "wildwest_platform-mesh_io_cowboys",
-                          "navigationContext": "wildwest_platform-mesh_io_cowboys",
-                          "label": "Cowboys",
+                          "pathSegment": "ianus_platform-mesh_io_models",
+                          "navigationContext": "ianus_platform-mesh_io_models",
+                          "label": "Models",
                           "icon": "person-placeholder",
                           "order": 800,
                           "entityType": "main.core_platform-mesh_io_account.namespace",
@@ -30,10 +30,10 @@ spec:
                           },
                           "context": {
                               "resourceDefinition": {
-                                  "group": "wildwest.platform-mesh.io",
-                                  "plural": "cowboys",
-                                  "singular": "cowboy",
-                                  "kind": "Cowboy",
+                                  "group": "ianus.platform-mesh.io",
+                                  "plural": "models",
+                                  "singular": "model",
+                                  "kind": "Model",
                                   "version": "v1alpha1",
                                   "scope": "Namespaced",
                                   "namespace": null,
@@ -79,28 +79,28 @@ spec:
                           },
                           "children": [
                             {
-                                "pathSegment": ":cowboyId",
+                                "pathSegment": ":modelId",
                                 "hideFromNav": true,
                                 "keepSelectedForChildren": false,
                                 "defineEntity": {
-                                    "id": "wildwest_platform-mesh_io_cowboy",
-                                    "contextKey": "cowboyId",
+                                    "id": "ianus_platform-mesh_io_model",
+                                    "contextKey": "modelId",
                                     "graphqlEntity": {
-                                        "group": "wildwest_platform-mesh_io",
-                                        "kind": "Cowboy",
+                                        "group": "ianus_platform-mesh_io",
+                                        "kind": "Model",
                                         "query": "{ metadata { name } }"
                                     }
                                 },
                                 "context": {
                                     "accountId": ":accountId",
                                     "namespaceId": ":namespaceId",
-                                    "resourceId": ":cowboyId"
+                                    "resourceId": ":modelId"
                                 }
                             }
                           ]
                       },
                       {
-                        "entityType": "main.core_platform-mesh_io_account.namespace.wildwest_platform-mesh_io_cowboy",
+                        "entityType": "main.core_platform-mesh_io_account.namespace.ianus_platform-mesh_io_model",
                         "pathSegment": "dashboard",
                         "label": "Dashboard",
                         "url": "/assets/platform-mesh-portal-ui-wc.js#generic-detail-view",

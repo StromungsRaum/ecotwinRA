@@ -1,0 +1,18 @@
+apiVersion: apis.kcp.io/v1alpha2
+kind: APIExport
+metadata:
+  labels:
+    ui.platform-mesh.io/content-for: ianus.platform-mesh.io
+  name: ianus.platform-mesh.io
+spec:
+  permissionClaims:
+    - resource: events
+      verbs:
+        - "*"
+  resources:
+    - group: ianus.platform-mesh.io
+      name: models
+      schema: v260506-995936a.models.ianus.platform-mesh.io
+      storage:
+        crd: {}
+status: {}

@@ -39,15 +39,15 @@ import (
 
 	"github.com/kcp-dev/multicluster-provider/apiexport"
 
-	wildwestv1alpha1 "github.com/platform-mesh/provider-quickstart/apis/wildwest/v1alpha1"
-	wildwest "github.com/platform-mesh/provider-quickstart/operator/wild-west"
+	ianusv1alpha1 "github.com/StromungsRaum/ecotwinRA/apis/ianus/v1alpha1"
+	ianus "github.com/StromungsRaum/ecotwinRA/operator/ianus"
 )
 
 func init() {
 	runtime.Must(corev1alpha1.AddToScheme(scheme.Scheme))
 	runtime.Must(tenancyv1alpha1.AddToScheme(scheme.Scheme))
 	runtime.Must(apisv1alpha1.AddToScheme(scheme.Scheme))
-	runtime.Must(wildwestv1alpha1.AddToScheme(scheme.Scheme))
+	runtime.Must(ianusv1alpha1.AddToScheme(scheme.Scheme))
 }
 
 func main() {
@@ -61,7 +61,7 @@ func main() {
 		provider      *apiexport.Provider
 	)
 
-	pflag.StringVar(&endpointSlice, "endpointslice", "wildwest.platform-mesh.io", "Set the APIExportEndpointSlice name to watch")
+	pflag.StringVar(&endpointSlice, "endpointslice", "ianus.platform-mesh.io", "Set the APIExportEndpointSlice name to watch")
 	pflag.Parse()
 
 	cfg := ctrl.GetConfigOrDie()
@@ -97,10 +97,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Setup Cowboy controller
-	cowboyReconciler := &wildwest.CowboyReconciler{}
-	if err := cowboyReconciler.SetupWithManager(mgr); err != nil {
-		entryLog.Error(err, "failed to setup cowboy controller")
+	// Setup Model controller
+	modelReconciler := &ianus.ModelReconciler{}
+	if err := modelReconciler.SetupWithManager(mgr); err != nil {
+		entryLog.Error(err, "failed to setup model controller")
 		os.Exit(1)
 	}
 
