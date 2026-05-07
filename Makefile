@@ -1,0 +1,195 @@
+# Copyright 2025 The Platform Mesh Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+SHELL := /usr/bin/env bash
+
+# Tool installation
+GO_INSTALL = ./hack/go-install.sh
+
+TOOLS_DIR = hack/tools
+GOBIN_DIR := $(abspath $(TOOLS_DIR))
+
+# controller-gen
+CONTROLLER_GEN_VER := v0.16.5
+CONTROLLER_GEN_BIN := controller-gen
+CONTROLLER_GEN := $(GOBIN_DIR)/$(CONTROLLER_GEN_BIN)-$(CONTROLLER_GEN_VER)
+export CONTROLLER_GEN
+
+# apigen - generates APIResourceSchemas from CRDs
+APIGEN_VER := v0.28.1-0.20251209130449-436a0347809b
+APIGEN_BIN := apigen
+APIGEN := $(GOBIN_DIR)/$(APIGEN_BIN)-$(APIGEN_VER)
+export APIGEN
+
+# Go parameters
+GOCMD = go
+GOBUILD = $(GOCMD) build
+GORUN = $(GOCMD) run
+GOMOD = $(GOCMD) mod
+GOFMT = $(GOCMD) fmt
+
+# Binary names
+BINARY_NAME = wild-west
+INIT_BINARY_NAME = wild-west-init
+
+# Build directory
+BUILD_DIR = bin
+
+# Image parameters
+IMAGE_REGISTRY ?= ghcr.io/platform-mesh
+IMAGE_NAME ?= provider-quickstart
+IMAGE_TAG ?= dev
+IMAGE ?= $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
+
+# Portal image parameters
+PORTAL_IMAGE_NAME ?= provider-quickstart-portal
+PORTAL_IMAGE ?= $(IMAGE_REGISTRY)/$(PORTAL_IMAGE_NAME):$(IMAGE_TAG)
+PORTAL_PORT ?= 4200
+
+.PHONY: all
+all: build
+
+## build: Build all binaries
+.PHONY: build
+build: build-operator build-init
+
+## build-operator: Build the wild-west operator binary
+.PHONY: build-operator
+build-operator: fmt vet
+	$(GOBUILD) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/wild-west/...
+
+## build-init: Build the init/bootstrap binary
+.PHONY: build-init
+build-init: fmt vet
+	$(GOBUILD) -o $(BUILD_DIR)/$(INIT_BINARY_NAME) ./cmd/init/...
+
+## run: Run the wild-west operator locally
+.PHONY: run
+run: fmt vet
+	$(GORUN) ./cmd/wild-west/main.go --endpointslice=wildwest.platform-mesh.io
+
+## init: Bootstrap provider resources into workspace (requires KUBECONFIG, optional HOST_OVERRIDE)
+HOST_OVERRIDE ?=
+.PHONY: init
+init: build-init
+	$(BUILD_DIR)/$(INIT_BINARY_NAME) $(if $(HOST_OVERRIDE),--host-override=$(HOST_OVERRIDE))
+
+## generate: Generate code (deepcopy, etc.) and kcp resources
+.PHONY: generate
+generate: $(CONTROLLER_GEN) manifests apiresourceschemas
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./apis/..."
+
+## manifests: Generate CRD manifests
+.PHONY: manifests
+manifests: $(CONTROLLER_GEN)
+	$(CONTROLLER_GEN) crd paths="./apis/..." output:crd:artifacts:config=config/crds
+
+## apiresourceschemas: Generate APIResourceSchemas from CRDs
+.PHONY: apiresourceschemas
+apiresourceschemas: manifests $(APIGEN)
+	$(APIGEN) --input-dir=config/crds --output-dir=config/kcp
+
+## fmt: Run go fmt
+.PHONY: fmt
+fmt:
+	$(GOFMT) ./...
+
+## vet: Run go vet
+.PHONY: vet
+vet:
+	$(GOCMD) vet ./...
+
+## tidy: Run go mod tidy
+.PHONY: tidy
+tidy:
+	$(GOMOD) tidy
+
+## image-build: Build controller container image locally
+.PHONY: image-build
+image-build:
+	docker build -t $(IMAGE) -f deploy/Dockerfile .
+
+## image-push: Push controller container image to registry
+.PHONY: image-push
+image-push: image-build
+	docker push $(IMAGE)
+
+## portal-image-build: Build portal container image locally
+.PHONY: portal-image-build
+portal-image-build:
+	docker build -t $(PORTAL_IMAGE) -f deploy/portal.Dockerfile .
+
+## portal-image-push: Push portal container image to registry
+.PHONY: portal-image-push
+portal-image-push: portal-image-build
+	docker push $(PORTAL_IMAGE)
+
+## images: Build all container images
+.PHONY: images
+images: image-build portal-image-build
+
+## images-push: Push all container images
+.PHONY: images-push
+images-push: image-push portal-image-push
+
+# Kind cluster parameters
+KIND_CLUSTER ?= platform-mesh
+
+## kind-load: Load controller image into kind cluster
+.PHONY: kind-load
+kind-load: image-build
+	kind load docker-image $(IMAGE) --name $(KIND_CLUSTER)
+
+## kind-load-portal: Load portal image into kind cluster
+.PHONY: kind-load-portal
+kind-load-portal: portal-image-build
+	kind load docker-image $(PORTAL_IMAGE) --name $(KIND_CLUSTER)
+
+## kind-load-all: Load all images into kind cluster
+.PHONY: kind-load-all
+kind-load-all: kind-load kind-load-portal
+
+## portal-run: Run portal container locally (accessible at http://localhost:$(PORTAL_PORT))
+.PHONY: portal-run
+portal-run:
+	docker run --rm -p $(PORTAL_PORT):8080 $(PORTAL_IMAGE)
+
+## portal-run-detached: Run portal container in background
+.PHONY: portal-run-detached
+portal-run-detached:
+	docker run -d --rm --name wildwest-portal -p $(PORTAL_PORT):80 $(PORTAL_IMAGE)
+	@echo "Portal running at http://localhost:$(PORTAL_PORT)"
+	@echo "Stop with: docker stop wildwest-portal"
+
+## portal-stop: Stop the portal container
+.PHONY: portal-stop
+portal-stop:
+	docker stop wildwest-portal
+
+## tools: Install all required tools
+.PHONY: tools
+tools: $(CONTROLLER_GEN) $(APIGEN)
+
+## help: Display this help
+.PHONY: help
+help:
+	@echo "Usage:"
+	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' | sed -e 's/^/ /'
+
+# Tool installation targets
+$(CONTROLLER_GEN):
+	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/$(CONTROLLER_GEN_BIN) $(CONTROLLER_GEN_BIN) $(CONTROLLER_GEN_VER)
+
+$(APIGEN):
+	GOBIN=$(GOBIN_DIR) $(GO_INSTALL) github.com/kcp-dev/sdk/cmd/$(APIGEN_BIN) $(APIGEN_BIN) $(APIGEN_VER)
