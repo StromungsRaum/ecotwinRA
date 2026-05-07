@@ -8,3 +8,10 @@ __pycache__/
 .*cache/
 build/
 book/
+bin/**
+.claude
+hack/tools/**
+*.kubeconfig
+create-micro-frontend
+portal/node_modules
+portal/.angular
