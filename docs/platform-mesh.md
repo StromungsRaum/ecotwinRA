@@ -2,6 +2,10 @@
 
 A template for building the Platform Mesh IANUS provider. This repo demonstrates how to create a provider that exposes APIs through kcp and integrates with the Platform Mesh UI.
 
+## Start Platform Mesh locally
+
+[Local Setup for Platform Mesh](https://github.com/platform-mesh/helm-charts/tree/main/local-setup)
+
 ## What This Repo Does
 
 This is an example "Ianus" provider that exposes a `Models` API (`ianus.platform-mesh.io`). It shows how to:
