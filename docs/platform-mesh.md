@@ -8,7 +8,10 @@ A template for building the Platform Mesh IANUS provider. This repo demonstrates
 
 ## What This Repo Does
 
-This is an example "Ianus" provider that exposes a `Models` API (`ianus.platform-mesh.io`). It shows how to:
+This is an instructions to make a "Ianus" provider that exposes a `Models` API (`ianus.platform-mesh.io`).
+It is based on [Platform Mesh - Provider Quickstart](https://github.com/platform-mesh/provider-quickstart).
+
+Steps:
 
 1. **Define and export APIs via kcp** - Using `APIExport` and `APIResourceSchema` resources
 2. **Register as a Platform Mesh provider** - Using `ProviderMetadata` to describe your provider
