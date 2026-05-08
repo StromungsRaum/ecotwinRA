@@ -1,0 +1,10 @@
+apiVersion: v2
+name: ianus-portal
+description: IANUS Simulation Portal - Angular UI for KCP
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+dependencies:
+  - name: common
+    version: 0.12.1
+    repository: oci://ghcr.io/platform-mesh/helm-charts
