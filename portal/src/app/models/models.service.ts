@@ -389,7 +389,7 @@ export class ModelsService {
   //       return of([]);
   //     })
   //   );
-   listModels(): Observable<Model[]> {
+  listModels(): Observable<Model[]> {
     console.log('[ModelsService] Using:', MOCK_MODELS);
     return of(MOCK_MODELS)
   }

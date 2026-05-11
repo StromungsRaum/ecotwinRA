@@ -10,7 +10,7 @@
             "collapsible": false
           },
           "pathSegment": "models",
-          "label": "Models",
+          "label": "StrömungsRaum",
           "hideFromNav": false,
           "icon": "person-placeholder",
           "url": "http://localhost:4200/index.html",
