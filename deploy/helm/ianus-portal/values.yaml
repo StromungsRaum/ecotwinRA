@@ -1,9 +1,9 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/platform-mesh/provider-quickstart-portal
+  repository: ghcr.io/platform-mesh/ianus-portal
   pullPolicy: IfNotPresent
-  tag: "@sha256:f1a9f240f5c4d3f4ce6ef8168f20fb1eb60f7b242a2d45bbe92738b6d01ff75f"
+  tag: "latest"
 
 imagePullSecrets: []
 nameOverride: ""

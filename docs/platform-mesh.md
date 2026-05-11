@@ -76,7 +76,7 @@ The `ui.platform-mesh.io/content-for` label is critical - it associates your UI 
 You need the admin kubeconfig to create and manage provider workspaces:
 
 ```bash
-cp ../helm-charts/.secret/kcp/admin.kubeconfig kcp-admin.kubeconfig
+cp ../../platform-mesh/helm-charts/.secret/kcp/admin.kubeconfig kcp-admin.kubeconfig
 export PM_KUBECONFIG="$(realpath kcp-admin.kubeconfig)"
 kind export kubeconfig --name platform-mesh --kubeconfig compute.kubeconfig
 export COMPUTE_KUBECONFIG="$(realpath compute.kubeconfig)"
@@ -143,7 +143,6 @@ KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create secret generic ianus-controller-ku
 ```
 
 Deploy the controller:
-
 ```bash
 KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade --install ianus-controller ./deploy/helm/ianus-controller \
   --namespace provider-models \

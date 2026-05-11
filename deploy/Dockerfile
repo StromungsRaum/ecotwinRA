@@ -1,21 +1,28 @@
-FROM python:3.12-slim-trixie
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+FROM --platform=$BUILDPLATFORM golang:1.26@sha256:5f3787b7f902c07c7ec4f3aa91a301a3eda8133aa32661a3b3a3a86ab3a68a36 AS builder
 
-ARG GID=1000
-ARG UID=1000
-ARG BRANCH=int
-ENV GID=${GID}
-ENV UID=${UID}
-ENV BRANCH=${BRANCH}
+ARG TARGETOS
+ARG TARGETARCH
+ARG VERSION=dev
+ARG GIT_COMMIT=unknown
+ARG BUILD_DATE=unknown
 
-WORKDIR /app
+WORKDIR /workspace
 
-# Install dependencies
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --locked --no-install-project
+COPY go.mod go.sum ./
+RUN go mod download
 
-COPY . /app
+COPY . .
 
-CMD ["uv", "run", "uvicorn", "ecotwin.api_server:app", "--host", "0.0.0.0", "--port", "8000"]
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+    -ldflags="-s -w -X main.version=${VERSION} -X main.gitCommit=${GIT_COMMIT} -X main.buildDate=${BUILD_DATE}" \
+    -o ianus ./cmd/ianus/...
+
+FROM gcr.io/distroless/static:nonroot@sha256:e3f945647ffb95b5839c07038d64f9811adf17308b9121d8a2b87b6a22a80a39
+
+WORKDIR /
+
+COPY --from=builder /workspace/ianus /ianus
+
+USER 65532:65532
+
+ENTRYPOINT ["/ianus"]

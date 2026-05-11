@@ -48,12 +48,12 @@ BUILD_DIR = bin
 
 # Image parameters
 IMAGE_REGISTRY ?= ghcr.io/platform-mesh
-IMAGE_NAME ?= provider-quickstart
+IMAGE_NAME ?= ianus-controller
 IMAGE_TAG ?= dev
 IMAGE ?= $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 
 # Portal image parameters
-PORTAL_IMAGE_NAME ?= provider-quickstart-portal
+PORTAL_IMAGE_NAME ?= ianus-portal
 PORTAL_IMAGE ?= $(IMAGE_REGISTRY)/$(PORTAL_IMAGE_NAME):$(IMAGE_TAG)
 PORTAL_PORT ?= 4200
 
