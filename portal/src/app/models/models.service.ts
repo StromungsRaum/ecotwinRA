@@ -124,6 +124,188 @@ const DELETE_MODEL_MUTATION = `
   }
 `;
 
+export const MOCK_MODELS: Model[] = [
+  {
+    metadata: {
+      name: 'ExtrusionDie',
+      namespace: 'manufacturing',
+      creationTimestamp: '2026-05-11T12:00:00Z'
+    },
+    spec: {
+      intent: 'design-shape'
+    },
+    status: {
+      result: 'completed'
+    }
+  },
+  {
+    metadata: {
+      name: 'Silicone-Extruder',
+      namespace: 'production'
+    },
+    spec: {
+      intent: 'process-silicone'
+    },
+    status: {
+      result: 'running'
+    }
+  },
+  {
+    metadata: {
+      name: 'Screw',
+      namespace: 'components'
+    },
+    spec: {
+      intent: 'convey-material'
+    }
+  },
+  {
+    metadata: {
+      name: 'Progressing-Cavity-Pump',
+      namespace: 'fluid-dynamics'
+    },
+    spec: {
+      intent: 'transfer-fluid'
+    },
+    status: {
+      result: 'idle'
+    }
+  },
+  {
+    metadata: {
+      name: 'Twinscrew',
+      namespace: 'components'
+    },
+    spec: {
+      intent: 'mix-polymer'
+    }
+  },
+  {
+    metadata: {
+      name: 'Multi-Screw-Pump',
+      namespace: 'fluid-dynamics'
+    },
+    spec: {
+      intent: 'pressurize'
+    }
+  },
+  {
+    metadata: {
+      name: 'Tolerance-Check',
+      namespace: 'quality-control'
+    },
+    spec: {
+      intent: 'validate-geometry'
+    },
+    status: {
+      result: 'passed'
+    }
+  },
+  {
+    metadata: {
+      name: 'Injection Molding',
+      namespace: 'manufacturing'
+    },
+    spec: {
+      intent: 'mold-part'
+    }
+  },
+  {
+    metadata: {
+      name: 'Centrifugal-Pump',
+      namespace: 'fluid-dynamics'
+    },
+    spec: {
+      intent: 'circulate-coolant'
+    }
+  },
+  {
+    metadata: {
+      name: 'Aeration Tank',
+      namespace: 'treatment'
+    },
+    spec: {
+      intent: 'oxygenate'
+    }
+  },
+  {
+    metadata: {
+      name: 'Hotrunner',
+      namespace: 'components'
+    },
+    spec: {
+      intent: 'maintain-temp'
+    }
+  },
+  {
+    metadata: {
+      name: 'Calibrator',
+      namespace: 'manufacturing'
+    },
+    spec: {
+      intent: 'size-profile'
+    }
+  },
+  {
+    metadata: {
+      name: 'Excentric Screw Pump',
+      namespace: 'fluid-dynamics'
+    },
+    spec: {
+      intent: 'meter-dosing'
+    }
+  },
+  {
+    metadata: {
+      name: 'Die-Optimisation',
+      namespace: 'simulation'
+    },
+    spec: {
+      intent: 'reduce-pressure-drop'
+    },
+    status: {
+      result: 'optimized'
+    }
+  },
+  {
+    metadata: {
+      name: 'Rotary-Lobe-Pump',
+      namespace: 'fluid-dynamics'
+    },
+    spec: {
+      intent: 'move-viscous-media'
+    }
+  },
+  {
+    metadata: {
+      name: 'Virtual Test Bench',
+      namespace: 'simulation'
+    },
+    spec: {
+      intent: 'run-flow-analysis'
+    }
+  },
+  {
+    metadata: {
+      name: 'Screw-Spindle-Pump',
+      namespace: 'fluid-dynamics'
+    },
+    spec: {
+      intent: 'hydraulic-power'
+    }
+  },
+  {
+    metadata: {
+      name: 'Die',
+      namespace: 'manufacturing'
+    },
+    spec: {
+      intent: 'extrude-profile'
+    }
+  }
+];
+
+
 interface GraphQLConfig {
   endpoint: string;
   token: string | null;
@@ -186,27 +368,30 @@ export class ModelsService {
    * List all Models from the Kubernetes cluster.
    * Uses the GraphQL query pattern: {apiGroup}.{version}.{Kind}s
    */
-  listModels(): Observable<Model[]> {
-    return this.getGraphQLConfig().pipe(
-      switchMap(({ endpoint, token }) =>
-        from(
-          fetch(endpoint, {
-            method: 'POST',
-            headers: this.buildHeaders(token),
-            body: JSON.stringify({
-              query: LIST_MODELS_QUERY,
-            }),
-          }).then((res) => res.json())
-        )
-      ),
-      map((response: { data: ModelListResponse }) => {
-        return response.data?.ianus_platform_mesh_io?.v1alpha1?.Models?.items || [];
-      }),
-      catchError((error) => {
-        console.error('Error fetching models:', error);
-        return of([]);
-      })
-    );
+  // listModels(): Observable<Model[]> {
+  //   return this.getGraphQLConfig().pipe(
+  //     switchMap(({ endpoint, token }) =>
+  //       from(
+  //         fetch(endpoint, {
+  //           method: 'POST',
+  //           headers: this.buildHeaders(token),
+  //           body: JSON.stringify({
+  //             query: LIST_MODELS_QUERY,
+  //           }),
+  //         }).then((res) => res.json())
+  //       )
+  //     ),
+  //     map((response: { data: ModelListResponse }) => {
+  //       return response.data?.ianus_platform_mesh_io?.v1alpha1?.Models?.items || [];
+  //     }),
+  //     catchError((error) => {
+  //       console.error('Error fetching models:', error);
+  //       return of([]);
+  //     })
+  //   );
+   listModels(): Observable<Model[]> {
+    console.log('[ModelsService] Using:', MOCK_MODELS);
+    return of(MOCK_MODELS)
   }
 
   /**

@@ -152,7 +152,7 @@ api-image-push: api-image-build
 
 ## images: Build all container images
 .PHONY: images
-images: image-build portal-image-build api-image-build
+images: image-build portal-image-build
 
 ## images-push: Push all container images
 .PHONY: images-push
@@ -178,7 +178,7 @@ kind-load-api: api-image-build
 
 ## kind-load-all: Load all images into kind cluster
 .PHONY: kind-load-all
-kind-load-all: kind-load kind-load-portal kind-load-api
+kind-load-all: kind-load kind-load-portal
 
 ## portal-run: Run portal container locally (accessible at http://localhost:$(PORTAL_PORT))
 .PHONY: portal-run
