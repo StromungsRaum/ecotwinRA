@@ -3,7 +3,7 @@ import typer
 from loguru import logger
 
 from ecotwin.common.api_connector import (
-    create_api_connector,
+    create_api_handler,
 )
 from ecotwin.common.system import System
 
@@ -18,10 +18,10 @@ def models_command(
     """Get information about StrömungsRaum models."""
     logger.info("Get information about models")
 
-    backend_handler = create_api_connector(system)
+    api_handler = create_api_handler(system)
 
-    models = backend_handler.get_models()
+    models = api_handler.get_models()
 
     logger.info("Models:")
     for model in models:
-        logger.info(f"\t{model[0]} - {model[1]}")
+        logger.info(f"\t{model}")

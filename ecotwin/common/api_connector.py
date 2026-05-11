@@ -4,7 +4,7 @@ import json
 from loguru import logger
 import os
 import re
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
 import requests
@@ -173,7 +173,7 @@ class BackendConnector:
         Returns:
             _type_ -- The response.
         """
-        logger.debug(f"POST: {self.url+api_path}")
+        logger.debug(f"POST: {self.url + api_path}")
         # print(self.session.headers)
         # print(self.session.cookies)
         headers = {}  # self.headers.copy()
@@ -255,7 +255,105 @@ class BackendConnector:
         )
 
 
-class BackendHandler:
+class JobHandler:
+    """Class to handle the connecting/authentification to the simod cluster handling backend."""
+
+    def __init__(
+        self,
+        email: str,
+        password: str,
+        url: str = "https://backend.simod.de",
+        verify: bool = True,
+        proxies: Optional[Dict[str, str]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        timeout: int = 500,
+        bearer_token: Optional[str] = None,
+    ) -> None:
+        """Create the connection with the simod backend.
+
+        Arguments:
+            email {string} -- The Email of the cluster account
+            password {string} -- The password of the account
+
+        Keyword Arguments:
+            url {str} -- The backend to connect with (default: {'https://backend.simod.de'})
+            verify {bool} -- Optional. A Boolean or a String indication to verify
+                the servers TLS certificate or not. (default: {True})
+            proxies {Optional[Dict[str, str]]} -- (default: None)
+            headers {Optional[Dict]} -- (default: None)
+            bearer_token {Optiona[str]} -- If none, login an retrive a the token (default: None)
+
+        Raises:
+            r.raise_for_status: Raises the error message from the connection
+                (Wrong Password, No Connection etc.).
+        """
+        login_data = {
+            "email": email,
+            "password": password,
+        }
+        self.url = url
+        self.headers = {}
+        self.timeout = timeout
+        if headers is not None:
+            self.headers.update(headers)
+        self.verify = verify
+        self.proxies = proxies
+
+        from requests import Session
+        from requests.adapters import HTTPAdapter
+        from urllib3.util import Retry
+
+        self.session = Session()
+        retries = Retry(
+            connect=10,
+            total=10,
+            backoff_factor=0.2,
+        )
+        adapter = HTTPAdapter(max_retries=retries)
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
+
+        if bearer_token is None:
+            # login and get the token
+            req_return = self.session.post(
+                url=f"{self.url}/api/login",
+                data=login_data,
+                verify=self.verify,
+                proxies=self.proxies,
+                headers=self.headers,
+                timeout=self.timeout,
+            )
+
+            if req_return.status_code != 200:
+                raise req_return.raise_for_status()
+
+            bearer_token = req_return.json()["success"]["token"]
+
+        self.bearer_token = bearer_token
+        self.headers["Authorization"] = "Bearer " + self.bearer_token
+
+    def getModelList(self):
+        """
+        Arguments:
+            job_id {int} -- The id of the job to get the data of
+
+        Returns:
+            data {dict} -- The current set of the Job Data
+        """
+        r = requests.get(
+            self.url + "/api/automated_user/form/list",
+            headers=self.headers,
+            verify=self.verify,
+            proxies=self.proxies,
+        )
+        if r.status_code != 200:
+            print(r.text)
+            r.raise_for_status()
+
+        return r.json()["success"]
+
+
+class AjaxApiHandler:
     """Class to handle the connecting/authentication to the simod backend."""
 
     def __init__(self, api_connector):
@@ -275,16 +373,41 @@ class BackendHandler:
                 raise ValueError("Bad login credentials.")
             logger.info(response.content[:400])
             raise response.raise_for_status()
+        response = json.loads(response.content)
+        data = response["data"]
 
-        ajax_json = json.loads(response.content)
-
-        data = ajax_json["data"]
-        models = []
+        models = set()
         for item in data:
             name_en = item["name_en"]
             name = item["name"]
             if "Automatisch" in name:
-                models.append((name, name_en))
+                bits = name_en.split("|")
+                if len(bits) > 1:
+                    models.add(bits[1])
+
+        return list(models)
+
+
+class ApiHandler:
+    """Class to handle the connecting/authentication to the simod backend."""
+
+    def __init__(self, api_connector):
+        """Create the backend handler."""
+        self.api = api_connector
+
+    def get_models(
+        self,
+    ):
+        """Return the list of models."""
+
+        response = self.api.getModelList()
+
+        data = response
+        models = []
+        for item in data:
+            name = item["name"]
+            if "Automatisch" in name:
+                models.append(name)
 
         return models
 
@@ -331,36 +454,45 @@ def get_backend_url(backend: System):
     return systems[backend]
 
 
-def create_api_connector(
-    backend: System,
+def create_api_handler(
+    system: System,
     credentials: Optional[Dict[str, str]] = None,
-) -> BackendHandler:
-    """Connect to the requested system and create a BackendHandler.
+) -> Any:
+    """Connect to the requested system and create a ApiHandler.
 
     Arguments:
         backend {System} -- The system to connect to.
 
     Returns:
-        BackendHandler -- The connected BackendHandler.
+        ApiHandler -- The connected ApiHandler.
     """
-    logger.info(f"Connecting to backend: {backend}")
+    logger.info(f"Connecting to backend: {system}")
 
     dot_env_path = get_env_file_path()
     if dot_env_path is not None:
-        logger.info(f"Please store credentials {dot_env_path}")
+        logger.info(f"Using credentials {dot_env_path}")
         load_dotenv(dot_env_path, interpolate=True)
 
-    credentials = _get_credentials_from_env(backend=backend)
+    credentials = _get_credentials_from_env(backend=system)
+    logger.info(f"credentials: {credentials}")
 
-    backend_url = get_backend_url(backend=backend)
+    backend_url = get_backend_url(backend=system)
 
-    verify = backend != "dev"
+    verify = system != "dev"
 
-    backend_connector = BackendConnector(
+    api_connector = BackendConnector(
         email=credentials["email"],
         password=credentials["passwd"],
         url=backend_url,
         verify=verify,
     )
+    return AjaxApiHandler(api_connector)
 
-    return BackendHandler(backend_connector)
+    # api_connector = JobHandler(
+    #     email=credentials["email"],
+    #     password=credentials["passwd"],
+    #     url=backend_url,
+    #     verify=verify,
+    # )
+
+    # return ApiHandler(api_connector)
