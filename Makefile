@@ -57,6 +57,11 @@ PORTAL_IMAGE_NAME ?= ianus-portal
 PORTAL_IMAGE ?= $(IMAGE_REGISTRY)/$(PORTAL_IMAGE_NAME):$(IMAGE_TAG)
 PORTAL_PORT ?= 4200
 
+# IANUS proxy api image parameters
+API_IMAGE_NAME ?= ianus-api
+API_IMAGE ?= $(IMAGE_REGISTRY)/$(API_IMAGE_NAME):$(IMAGE_TAG)
+API_PORT ?= 8000
+
 .PHONY: all
 all: build
 
@@ -135,13 +140,23 @@ portal-image-build:
 portal-image-push: portal-image-build
 	docker push $(PORTAL_IMAGE)
 
+## api-image-build: Build IANUS proxy container image locally
+.PHONY: api-image-build
+api-image-build:
+	docker build -t $(API_IMAGE) -f deploy/api.Dockerfile .
+
+## api-image-push: Push IANUS proxy container image to registry
+.PHONY: api-image-push
+api-image-push: api-image-build
+	docker push $(API_IMAGE)
+
 ## images: Build all container images
 .PHONY: images
-images: image-build portal-image-build
+images: image-build portal-image-build api-image-build
 
 ## images-push: Push all container images
 .PHONY: images-push
-images-push: image-push portal-image-push
+images-push: image-push portal-image-push api-image-push
 
 # Kind cluster parameters
 KIND_CLUSTER ?= platform-mesh
@@ -156,9 +171,14 @@ kind-load: image-build
 kind-load-portal: portal-image-build
 	kind load docker-image $(PORTAL_IMAGE) --name $(KIND_CLUSTER)
 
+## kind-load-api: Load api image into kind cluster
+.PHONY: kind-load-api
+kind-load-api: api-image-build
+	kind load docker-image $(API_IMAGE) --name $(KIND_CLUSTER)
+
 ## kind-load-all: Load all images into kind cluster
 .PHONY: kind-load-all
-kind-load-all: kind-load kind-load-portal
+kind-load-all: kind-load kind-load-portal kind-load-api
 
 ## portal-run: Run portal container locally (accessible at http://localhost:$(PORTAL_PORT))
 .PHONY: portal-run
@@ -176,6 +196,11 @@ portal-run-detached:
 .PHONY: portal-stop
 portal-stop:
 	docker stop ianus-portal
+
+## portal-run: Run portal container locally (accessible at http://localhost:$(PORTAL_PORT))
+.PHONY: api-run
+api-run:
+	docker run --env-file .env --rm -p $(API_PORT):8000 $(API_IMAGE)
 
 ## tools: Install all required tools
 .PHONY: tools
