@@ -156,7 +156,7 @@ images: image-build portal-image-build
 
 ## images-push: Push all container images
 .PHONY: images-push
-images-push: image-push portal-image-push api-image-push
+images-push: image-push portal-image-push
 
 # Kind cluster parameters
 KIND_CLUSTER ?= platform-mesh
