@@ -62,7 +62,7 @@ This controller will tie into all the software stacks that are used.
 Each individual twin will be configured using a set of YAML files.
 The controller will be use the twin information to make sure that dependent tools have consistent information.
 
-Twin controller is further documented in [twinctl](./docs/twinctl.md).
+Twin controller is further documented in [twinctl](./docs/twinctl/twinctl.md).
 
 ## Digital Twin API
 

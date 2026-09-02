@@ -62,6 +62,7 @@ lazy_loader = LazyTyperGroup(
     lazy_subcommands={
         "info": "ecotwin.info.group.app",
         "login": "ecotwin.login.store.app",
+        "submission": "ecotwin.submission.group.app",
     },
 )
 

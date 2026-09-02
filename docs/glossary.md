@@ -2,7 +2,7 @@
 
 ## MSP - Managed Service Provider
 
-## KCP - Kubernates-like Control Plane
+## KCP - Kubernetes-like Control Plane
 
 ## CRDs - Custom Resource Definition
 
@@ -13,28 +13,37 @@
 
 ## Platform Mesh
 
-## KRO - Kubernates Resource Operator
+## KRO - Kubernetes Resource Operator
+
+### CEL Expressions
+Language you use in kro to reference data between resources
+
+### RGD - ResourceGraphDefinition
 
 ## OCM Controller - Open Cluster Management Controller
 
 ## OCM CLI - Open Component Model
 
-## Krew - Kubernates plugin manager
+## Krew - Kubernetes plugin manager
 
 ## OpenMCP - Open Managed Control Plane
 
-## Kustomize - Kubernates native configuration manager
+## Kustomize - Kubernetes native configuration manager
 
 ## Flux CLI
 
 ## Gardener
 
-## Kind - Kubernates in Docker
+## Kind - Kubernetes in Docker
 
-## K8s = Kubernates
+## K8s = Kubernetes
 
-## K9s - Kubernates CLI explorer
+## K9s - Kubernetes CLI explorer
 
 ## Helm - Helm Charts
 
 ## OpenMFP - Open Micro Frontend Platform
+
+## OpenID Connect (OIDC)
+Secure authentication layer built on OAuth 2.0 allows for external identity provider:w
+

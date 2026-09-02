@@ -7,11 +7,7 @@ In the second phase a full application will be provided.
 
 ## Terminology
 
-KCP
-: Kubernates like control plane [kcp.io](https://kcp.io)
-
-MSP
-: Managed Service Provider
+See [glossary](../glossary.md) for KCP/MSP and other term definitions.
 
 ## Plan
 

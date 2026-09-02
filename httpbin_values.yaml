@@ -1,0 +1,7 @@
+operator:
+  args:
+    - --local-http-route
+    - --local-http-route-port=8443
+    - --local-http-route-gateway-name=k8sapi-gateway
+    - --local-http-route-gateway-namespace=platform-mesh-system
+    - --domain=httpbin.services.portal.localhost

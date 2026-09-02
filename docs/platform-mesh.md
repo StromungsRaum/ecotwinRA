@@ -54,6 +54,8 @@ spec:
 
 The `ui.platform-mesh.io/content-for` label is critical - it associates your UI configuration with your APIExport.
 
+This repo's `config/provider/contentconfiguration.yaml` + `providermetadata.yaml` (inline-JSON `ContentConfiguration`, `ui.platform-mesh.io/v1alpha1`) already follow this pattern and are validated against current Platform Mesh convention — no migration needed here.
+
 ## Project Structure
 
 ```
@@ -317,84 +319,7 @@ Platform Mesh supports custom UIs for providers via microfrontends. This is usef
 
 ### Example Implementation
 
-This repo includes a complete working example in the `portal/` directory showing:
-
-- Luigi context integration for auth and API access
-- GraphQL queries/mutations for Kubernetes resources
-- SAP UI5 web components for consistent Portal styling
-- Local development proxy configuration
-
-See [portal/README.md](portal/README.md) for detailed documentation.
-
-### Key Integration Points
-
-**1. Luigi Context (auth & API URLs):**
-```typescript
-import { LuigiContextService } from '@luigi-project/client-support-angular';
-import LuigiClient from '@luigi-project/client';
-
-// Wait for Luigi handshake before making API calls
-LuigiClient.addInitListener(() => {
-  const context = luigiContextService.getContext();
-  const token = context.token;  // Bearer token
-  const apiUrl = context.portalContext.crdGatewayApiUrl;  // GraphQL endpoint
-});
-```
-
-**2. GraphQL API for K8s resources:**
-```graphql
-query ListMyResources {
-  my_api_group_io {
-    v1alpha1 {
-      MyResources {
-        items { metadata { name } spec { ... } }
-      }
-    }
-  }
-}
-```
-
-**3. ContentConfiguration (register your MFE):**
-```yaml
-apiVersion: ui.platform-mesh.io/v1alpha1
-kind: ContentConfiguration
-metadata:
-  labels:
-    ui.platform-mesh.io/content-for: my-api.platform-mesh.io  # Links to your APIExport
-  name: my-ui
-spec:
-  inlineConfiguration:
-    contentType: json
-    content: |
-      {
-        "name": "my-ui",
-        "luigiConfigFragment": {
-          "data": {
-            "nodes": [{
-              "pathSegment": "my-resources",
-              "label": "My Resources",
-              "entityType": "main.core_platform-mesh_io_account:1",
-              "url": "https://your-mfe-host/index.html"
-            }]
-          }
-        }
-      }
-```
-
-### Navigation Categories
-
-Group your MFE under a category in the sidebar:
-
-```json
-{
-  "category": { "label": "Providers", "icon": "customize", "collapsible": true },
-  "pathSegment": "my-resources",
-  "label": "My Resources",
-  ...
-}
-```
-
-See [Luigi navigation docs](https://docs.luigi-project.io/docs/navigation-configuration?section=category) for more options.
+This repo includes a complete working example in the `../portal/` directory (Luigi context integration, GraphQL queries/mutations for Kubernetes resources, SAP UI5 web components, local dev proxy). See [../portal/README.md](../portal/README.md) for the full Luigi microfrontend integration model (context/auth, GraphQL patterns, `ContentConfiguration` registration, navigation categories, local dev) — don't re-derive it here.
 
 ### Running as a Provider
 

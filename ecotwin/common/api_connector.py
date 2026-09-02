@@ -1,14 +1,14 @@
 """Script with all the necessary classes/functions to talk to the simod backend."""
 
 import json
-from loguru import logger
 import os
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
-from dotenv import load_dotenv
 import requests
 import urllib3
+from dotenv import load_dotenv
+from loguru import logger
 
 from ecotwin.common.system import System, get_env_file_path
 
@@ -17,7 +17,12 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class BackendConnector:
-    """Class to handle the connecting/auth to the simod cluster handling backend."""
+    """Class to handle the connecting/auth to the simod cluster handling backend.
+
+    Legacy, session/CSRF-based connector kept working for the `AjaxApiHandler`
+    (`/form/ajax`) integration path. New code should use `JobHandler` (token-based
+    `/api/login`) instead - see `create_api_handler(..., legacy=True)`.
+    """
 
     def __init__(
         self,
@@ -88,29 +93,14 @@ class BackendConnector:
             verify=self.verify,
             proxies=self.proxies,
         )
+        logger.info(f"response: {response}")
 
         if response.status_code != 200:
             logger.error(f"code: {response.status_code}")
             logger.info(response.content[:400])
             response.raise_for_status()
 
-        # print(r.headers)
-        # print(r.cookies)
         logger.info("Login passed")
-        # token = r.json()['success']['token']
-        # bearerToken = "Bearer "+token
-        # self.session.headers.update({'Authorization' : bearerToken})
-        # self.session.cookies['auth.strategy'] = 'local'
-        # self.session.cookies['auth._refresh_token.local'] = 'false'
-        # self.session.cookies['auth._token.local'] = bearerToken
-        # r = self.session.post(self.url+'/api/login', data=login_data,
-        #       verify=self.verify, proxies=self.proxies)
-        # print(self.session.headers)
-        # print(self.session.cookies)
-        # logger.info("Test")
-        # r = self.get('/admin/dashboard')
-        # print(self.session.cookies)
-        # print(r.cookies)
 
     def get(
         self,
@@ -124,7 +114,6 @@ class BackendConnector:
         Returns:
             _type_ -- The response.
         """
-        # logger.debug("HEADER: {}".format(self.headers))
         return self.session.get(
             url=self.url + api_path,
             verify=self.verify,
@@ -146,7 +135,6 @@ class BackendConnector:
         Returns:
             _type_ -- The response.
         """
-        # logger.debug("HEADER: {}".format(self.headers))
         return self.session.get(
             self.url + api_path,
             json=data,
@@ -174,9 +162,7 @@ class BackendConnector:
             _type_ -- The response.
         """
         logger.debug(f"POST: {self.url + api_path}")
-        # print(self.session.headers)
-        # print(self.session.cookies)
-        headers = {}  # self.headers.copy()
+        headers = {}
         if content_type is not None:
             headers["Content-Type"] = content_type
         return self.session.post(
@@ -223,7 +209,6 @@ class BackendConnector:
         Returns:
             _type_ -- The response.
         """
-        # logger.debug("PUT: {}".format(self.url+api_name))
         return self.session.put(
             self.url + api_path,
             verify=self.verify,
@@ -245,7 +230,6 @@ class BackendConnector:
         Returns:
             _type_ -- The response.
         """
-        # logger.debug("PUT: {}".format(self.url+api_name))
         return self.session.put(
             self.url + api_path,
             json=data,
@@ -264,8 +248,8 @@ class JobHandler:
         password: str,
         url: str = "https://backend.simod.de",
         verify: bool = True,
-        proxies: Optional[Dict[str, str]] = None,
-        headers: Optional[Dict[str, str]] = None,
+        proxies: Optional[dict[str, str]] = None,
+        headers: Optional[dict[str, str]] = None,
         timeout: int = 500,
         bearer_token: Optional[str] = None,
     ) -> None:
@@ -279,8 +263,8 @@ class JobHandler:
             url {str} -- The backend to connect with (default: {'https://backend.simod.de'})
             verify {bool} -- Optional. A Boolean or a String indication to verify
                 the servers TLS certificate or not. (default: {True})
-            proxies {Optional[Dict[str, str]]} -- (default: None)
-            headers {Optional[Dict]} -- (default: None)
+            proxies {Optional[dict[str, str]]} -- (default: None)
+            headers {Optional[dict]} -- (default: None)
             bearer_token {Optiona[str]} -- If none, login an retrive a the token (default: None)
 
         Raises:
@@ -332,16 +316,10 @@ class JobHandler:
         self.bearer_token = bearer_token
         self.headers["Authorization"] = "Bearer " + self.bearer_token
 
-    def getModelList(self):
-        """
-        Arguments:
-            job_id {int} -- The id of the job to get the data of
-
-        Returns:
-            data {dict} -- The current set of the Job Data
-        """
+    def get_campaigns(self):
+        """Return the submission campaigns (product/application templates) usable by this account."""
         r = requests.get(
-            self.url + "/api/automated_user/form/list",
+            self.url + "/api/automated_user/submission/campaigns",
             headers=self.headers,
             verify=self.verify,
             proxies=self.proxies,
@@ -352,9 +330,58 @@ class JobHandler:
 
         return r.json()["success"]
 
+    def get_entity(self, entity: str) -> dict:
+        """Return entities."""
+        r = requests.get(
+            self.url + f"/api/platform/{entity}",
+            headers=self.headers,
+            verify=self.verify,
+            proxies=self.proxies,
+        )
+        if r.status_code != 200:
+            logger.error(f"{entity}: {r.text}")
+            r.raise_for_status()
+
+        json_data = json.loads(r.text)
+
+        return json_data
+
+    def submit(self, payload: dict):
+        """Submit geometry/process/material/reporter parameters for a campaign.
+
+        Builds the digital twin and creates the simulation in one atomic call
+        against the `/api/automated_user/submission` endpoint.
+
+        Arguments:
+            payload {dict} -- Matches the endpoint's request shape: campaign_var,
+                geometry, process_parameters, material_selections, reporter_parameters.
+
+        Returns:
+            dict -- The `success` payload (simulation_id, digital_twin_id, status).
+        """
+        r = requests.post(
+            self.url + "/api/automated_user/submission",
+            json=payload,
+            headers=self.headers,
+            verify=self.verify,
+            proxies=self.proxies,
+            timeout=self.timeout,
+        )
+        if r.status_code != 200:
+            print(r.text)
+            r.raise_for_status()
+
+        return r.json()["success"]
+
 
 class AjaxApiHandler:
-    """Class to handle the connecting/authentication to the simod backend."""
+    """Class to handle the connecting/authentication to the simod backend.
+
+    Legacy path: scrapes the staff-only `/form/ajax` admin DataTables endpoint via
+    `BackendConnector`'s session/CSRF login. Superseded by `ApiHandler`
+    (token-based, hits the proper `/api/automated_user/submission/*` API), but
+    kept working - see `create_api_handler(..., legacy=True)`.
+    """
 
     def __init__(self, api_connector):
         """Create the backend handler."""
@@ -398,18 +425,15 @@ class ApiHandler:
     def get_models(
         self,
     ):
-        """Return the list of models."""
+        """Return the list of submission campaigns (product/application templates) usable by this account."""
+        return self.api.get_campaigns()
 
-        response = self.api.getModelList()
+    def get_entity(self, entity: str) -> dict:
+        return self.api.get_entity(entity)
 
-        data = response
-        models = []
-        for item in data:
-            name = item["name"]
-            if "Automatisch" in name:
-                models.append(name)
-
-        return models
+    def submit(self, payload: dict):
+        """Submit a full model (geometry + digital twin + simulation) in one call."""
+        return self.api.submit(payload)
 
 
 def _get_credentials_from_env(backend: System):
@@ -456,15 +480,22 @@ def get_backend_url(backend: System):
 
 def create_api_handler(
     system: System,
-    credentials: Optional[Dict[str, str]] = None,
+    credentials: Optional[dict[str, str]] = None,
+    legacy: bool = False,
 ) -> Any:
-    """Connect to the requested system and create a ApiHandler.
+    """Connect to the requested system and create an API handler.
 
     Arguments:
         backend {System} -- The system to connect to.
 
+    Keyword Arguments:
+        legacy {bool} -- If True, use the old session/CSRF `/form/ajax` scraping
+            path (`AjaxApiHandler`) instead of the token-based
+            `/api/automated_user/submission/*` API (`ApiHandler`, default).
+            (default: {False})
+
     Returns:
-        ApiHandler -- The connected ApiHandler.
+        ApiHandler | AjaxApiHandler -- The connected handler.
     """
     logger.info(f"Connecting to backend: {system}")
 
@@ -480,19 +511,20 @@ def create_api_handler(
 
     verify = system != "dev"
 
-    api_connector = BackendConnector(
+    if legacy:
+        api_connector = BackendConnector(
+            email=credentials["email"],
+            password=credentials["passwd"],
+            url=backend_url,
+            verify=verify,
+        )
+        return AjaxApiHandler(api_connector)
+
+    job_handler = JobHandler(
         email=credentials["email"],
         password=credentials["passwd"],
         url=backend_url,
         verify=verify,
     )
-    return AjaxApiHandler(api_connector)
 
-    # api_connector = JobHandler(
-    #     email=credentials["email"],
-    #     password=credentials["passwd"],
-    #     url=backend_url,
-    #     verify=verify,
-    # )
-
-    # return ApiHandler(api_connector)
+    return ApiHandler(job_handler)

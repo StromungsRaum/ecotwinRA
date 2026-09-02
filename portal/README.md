@@ -157,7 +157,7 @@ portal/
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20.19+/22.12+/24 (required by Angular 20, see `portal/package.json`)
 - Platform Mesh local setup running (see main repo README)
 - Your provider registered and bound to an account
 

@@ -25,9 +25,3 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["ecotwin*"]
-
-# [tool.setuptools]
-# packages = ["src"]
-
-[project.scripts]
-twinctl = "ecotwin.twinctl:twinctl"
