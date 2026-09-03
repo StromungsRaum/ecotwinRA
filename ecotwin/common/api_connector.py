@@ -330,10 +330,30 @@ class JobHandler:
 
         return r.json()["success"]
 
-    def get_entity(self, entity: str) -> dict:
+    def get_route(self, route: str) -> dict:
         """Return entities."""
         r = requests.get(
-            self.url + f"/api/platform/{entity}",
+            self.url + f"/{route}",
+            headers=self.headers,
+            verify=self.verify,
+            proxies=self.proxies,
+        )
+        if r.status_code != 200:
+            logger.error(f"{route}: {r.text}")
+            r.raise_for_status()
+
+        json_data = json.loads(r.text)
+
+        return json_data
+
+    def get_entity(self, entity: str) -> dict:
+        """Return entities."""
+        return self.get_route(f"api/platform/{entity}")
+
+    def get_single_entity(self, entity: str, entity_id: Any) -> dict:
+        """Return entities."""
+        r = requests.get(
+            self.url + f"/api/platform/{entity}/{str(entity_id)}",
             headers=self.headers,
             verify=self.verify,
             proxies=self.proxies,
@@ -372,6 +392,76 @@ class JobHandler:
             r.raise_for_status()
 
         return r.json()["success"]
+
+    def post_file(self, file_path: str) -> Any:
+        """Upload a file to the backend via `Api\\FileController` and return its id.
+
+        Arguments:
+            file_path {str} -- Path to the file to upload.
+
+        Returns:
+            Any -- The id of the created `BigFileAsset`, for later reference
+                (e.g. as a component parameter value).
+        """
+        with open(file_path, "rb") as fh:
+            r = requests.post(
+                self.url + "/api/files",
+                files={"image": (os.path.basename(file_path), fh)},
+                headers=self.headers,
+                verify=self.verify,
+                proxies=self.proxies,
+                timeout=self.timeout,
+            )
+
+        if r.status_code != 200:
+            logger.error(f"post_file: {r.text}")
+            r.raise_for_status()
+
+        return r.json()["id"]
+
+    def create_component(
+        self,
+        name: str,
+        component_type: str,
+        parameters: Optional[dict[str, Any]] = None,
+        components: Optional[dict[str, Any]] = None,
+    ) -> Any:
+        """Create a Component via `Api\\Platform\\ComponentController` and return its id.
+
+        Arguments:
+            name {str} -- Component name.
+            component_type {str} -- uuid of the component type
+                (see `get_entity("component_types")` for the available types
+                and the parameter/child-slot schema each one expects).
+
+        Keyword Arguments:
+            parameters {Optional[dict]} -- Type-dependent parameter values
+                (strings, numbers, or a file id from `post_file()` for a
+                CAD-file parameter). (default: None)
+            components {Optional[dict]} -- Child component references, keyed
+                by slot. (default: None)
+
+        Returns:
+            Any -- The id of the created component.
+        """
+        r = requests.post(
+            self.url + "/api/platform/components",
+            json={
+                "name": name,
+                "component_type": component_type,
+                "parameters": parameters or {},
+                "components": components or {},
+            },
+            headers=self.headers,
+            verify=self.verify,
+            proxies=self.proxies,
+            timeout=self.timeout,
+        )
+        if r.status_code != 200:
+            logger.error(f"create_component: {r.text}")
+            r.raise_for_status()
+
+        return r.json()["id"]
 
 
 class AjaxApiHandler:
@@ -428,12 +518,30 @@ class ApiHandler:
         """Return the list of submission campaigns (product/application templates) usable by this account."""
         return self.api.get_campaigns()
 
+    def get(self, route: str) -> dict:
+        return self.api.get_route(route)
+
     def get_entity(self, entity: str) -> dict:
         return self.api.get_entity(entity)
+
+    def get_single_entity(self, entity: str, entity_id: Any) -> dict:
+        return self.api.get_single_entity(entity, entity_id)
 
     def submit(self, payload: dict):
         """Submit a full model (geometry + digital twin + simulation) in one call."""
         return self.api.submit(payload)
+
+    def post_file(self, file_path: str) -> Any:
+        return self.api.post_file(file_path)
+
+    def create_component(
+        self,
+        name: str,
+        component_type: str,
+        parameters: Optional[dict[str, Any]] = None,
+        components: Optional[dict[str, Any]] = None,
+    ) -> Any:
+        return self.api.create_component(name, component_type, parameters, components)
 
 
 def _get_credentials_from_env(backend: System):
