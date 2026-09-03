@@ -417,6 +417,8 @@ class JobHandler:
             logger.error(f"post_file: {r.text}")
             r.raise_for_status()
 
+        logger.info(f"post_file: {r.text}")
+
         return r.json()["id"]
 
     def create_component(
