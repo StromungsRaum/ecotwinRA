@@ -1,0 +1,97 @@
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIResourceSchema
+metadata:
+  name: v260907-e9c64e5.digitaltwins.ianus.platform-mesh.io
+spec:
+  group: ianus.platform-mesh.io
+  names:
+    kind: DigitalTwin
+    listKind: DigitalTwinList
+    plural: digitaltwins
+    singular: digitaltwin
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.digitalTwinId
+      name: DigitalTwinID
+      type: string
+    name: v1alpha1
+    schema:
+      description: DigitalTwin is the Schema for the digitaltwins API
+      properties:
+        apiVersion:
+          description: |-
+            APIVersion defines the versioned schema of this representation of an object.
+            Servers should convert recognized schemas to the latest internal value, and
+            may reject unrecognized values.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+          type: string
+        kind:
+          description: |-
+            Kind is a string value representing the REST resource this object represents.
+            Servers may infer this from the endpoint the client submits requests to.
+            Cannot be updated.
+            In CamelCase.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: DigitalTwinSpec defines the desired state of DigitalTwin
+          properties:
+            componentRef:
+              description: |-
+                ComponentRef references the Component this digital twin is built from.
+                It must reach phase Ready before the digital twin can be created.
+              properties:
+                name:
+                  description: Name of the referenced resource
+                  type: string
+              required:
+              - name
+              type: object
+            name:
+              description: Name is the digital twin's name on the SIMOD backend
+              type: string
+            secretRefs:
+              description: SecretRefs is an array of references to Secrets containing
+                SIMOD credentials
+              items:
+                description: |-
+                  SecretReference references a Secret by name in the same namespace as the
+                  resource that holds the reference.
+                properties:
+                  name:
+                    description: Name of the referenced Secret
+                    type: string
+                required:
+                - name
+                type: object
+              type: array
+          required:
+          - componentRef
+          - name
+          type: object
+        status:
+          description: DigitalTwinStatus defines the observed state of DigitalTwin
+          properties:
+            digitalTwinId:
+              description: DigitalTwinID is the uuid the SIMOD backend assigned to
+                this digital twin.
+              type: string
+            message:
+              description: Message carries error details when Phase is Failed.
+              type: string
+            phase:
+              description: 'Phase is the current reconciliation phase: Pending, Ready,
+                or Failed.'
+              type: string
+          type: object
+      type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

@@ -58,11 +58,15 @@ func main() {
 
 	var (
 		endpointSlice string
+		simodBaseURL  string
 		provider      *apiexport.Provider
 	)
 
 	pflag.StringVar(&endpointSlice, "endpointslice", "ianus.platform-mesh.io", "Set the APIExportEndpointSlice name to watch")
+	pflag.StringVar(&simodBaseURL, "simod-base-url", "https://backend.simod.de", "Set the SIMOD backend base URL used by the SIMOD reconcilers")
 	pflag.Parse()
+
+	ianus.SetSIMODBaseURL(simodBaseURL)
 
 	cfg := ctrl.GetConfigOrDie()
 
@@ -97,10 +101,28 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Setup Model controller
-	modelReconciler := &ianus.ModelReconciler{}
-	if err := modelReconciler.SetupWithManager(mgr); err != nil {
-		entryLog.Error(err, "failed to setup model controller")
+	// Setup SIMOD controllers
+	componentReconciler := &ianus.ComponentReconciler{}
+	if err := componentReconciler.SetupWithManager(mgr); err != nil {
+		entryLog.Error(err, "failed to setup component controller")
+		os.Exit(1)
+	}
+
+	digitalTwinReconciler := &ianus.DigitalTwinReconciler{}
+	if err := digitalTwinReconciler.SetupWithManager(mgr); err != nil {
+		entryLog.Error(err, "failed to setup digitaltwin controller")
+		os.Exit(1)
+	}
+
+	executionParameterReconciler := &ianus.ExecutionParameterReconciler{}
+	if err := executionParameterReconciler.SetupWithManager(mgr); err != nil {
+		entryLog.Error(err, "failed to setup executionparameter controller")
+		os.Exit(1)
+	}
+
+	simulationReconciler := &ianus.SimulationReconciler{}
+	if err := simulationReconciler.SetupWithManager(mgr); err != nil {
+		entryLog.Error(err, "failed to setup simulation controller")
 		os.Exit(1)
 	}
 

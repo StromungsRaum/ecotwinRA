@@ -3,12 +3,13 @@ kind: ClusterRole
 metadata:
   name: ianus-controller
 rules:
-  # Full access to Models resources
+  # Full access to SIMOD resources (Component, DigitalTwin,
+  # ExecutionParameter, Simulation)
   - apiGroups: ["ianus.platform-mesh.io"]
-    resources: ["models"]
-    verbs: ["list"]
+    resources: ["components", "digitaltwins", "executionparameters", "simulations"]
+    verbs: ["list", "get", "watch"]
   - apiGroups: ["ianus.platform-mesh.io"]
-    resources: ["models/status"]
+    resources: ["components/status", "digitaltwins/status", "executionparameters/status", "simulations/status"]
     verbs: ["get", "update", "patch"]
   # Events
   - apiGroups: [""]

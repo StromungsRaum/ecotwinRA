@@ -1,0 +1,116 @@
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIResourceSchema
+metadata:
+  name: v260907-e9c64e5.components.ianus.platform-mesh.io
+spec:
+  group: ianus.platform-mesh.io
+  names:
+    kind: Component
+    listKind: ComponentList
+    plural: components
+    singular: component
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.componentId
+      name: ComponentID
+      type: string
+    name: v1alpha1
+    schema:
+      description: Component is the Schema for the components API
+      properties:
+        apiVersion:
+          description: |-
+            APIVersion defines the versioned schema of this representation of an object.
+            Servers should convert recognized schemas to the latest internal value, and
+            may reject unrecognized values.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+          type: string
+        kind:
+          description: |-
+            Kind is a string value representing the REST resource this object represents.
+            Servers may infer this from the endpoint the client submits requests to.
+            Cannot be updated.
+            In CamelCase.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: ComponentSpec defines the desired state of Component
+          properties:
+            componentType:
+              description: |-
+                ComponentType is the uuid of the SIMOD component type this component is
+                an instance of (see the backend's `GET /api/platform/component_types`
+                for the available types and the parameter/child-slot schema each one
+                expects).
+              type: string
+            components:
+              additionalProperties:
+                description: |-
+                  LocalObjectReference references another IANUS resource by name in the same
+                  namespace as the resource that holds the reference.
+                properties:
+                  name:
+                    description: Name of the referenced resource
+                    type: string
+                required:
+                - name
+                type: object
+              description: |-
+                Components references child components by slot name, pointing at other
+                Component resources in this namespace. Each referenced Component must
+                reach phase Ready before this component can be created on the backend.
+              type: object
+            name:
+              description: Name is the component's name on the SIMOD backend
+              type: string
+            parameters:
+              additionalProperties:
+                type: string
+              description: Parameters are the type-dependent parameter values ComponentType
+                expects.
+              type: object
+            secretRefs:
+              description: SecretRefs is an array of references to Secrets containing
+                SIMOD credentials
+              items:
+                description: |-
+                  SecretReference references a Secret by name in the same namespace as the
+                  resource that holds the reference.
+                properties:
+                  name:
+                    description: Name of the referenced Secret
+                    type: string
+                required:
+                - name
+                type: object
+              type: array
+          required:
+          - componentType
+          - name
+          type: object
+        status:
+          description: ComponentStatus defines the observed state of Component
+          properties:
+            componentId:
+              description: ComponentID is the uuid the SIMOD backend assigned to this
+                component.
+              type: string
+            message:
+              description: Message carries error details when Phase is Failed.
+              type: string
+            phase:
+              description: 'Phase is the current reconciliation phase: Pending, Ready,
+                or Failed.'
+              type: string
+          type: object
+      type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

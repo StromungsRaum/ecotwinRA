@@ -12,6 +12,8 @@ ECOTWIN Reference Architecture: a **Platform Mesh / kcp provider** called "IANUS
 
 There is no CI (no `.github/workflows/`), no linter configs beyond `go fmt`/`go vet`, and no automated Python test suite — keep that in mind when asked to "run the tests" or "check CI".
 
+See [agent_instructions.md](agent_instructions.md) for cross-repo context (this repo's `ecotwin/common/api_connector.py` is a client of the sibling `ianus-simod` Laravel backend) and agent working rules — read it too, it deliberately doesn't repeat what's here.
+
 ## Commands
 
 ### Go (operator)
@@ -56,9 +58,17 @@ npm test             # ng test
 
 ### Go operator: kcp multi-cluster, not vanilla controller-runtime
 
-`cmd/ianus/main.go` builds a **kcp-aware** manager (`sigs.k8s.io/multicluster-runtime` + `github.com/kcp-dev/multicluster-provider`), not a plain controller-runtime manager. It watches an `APIExportEndpointSlice` (name = `--endpointslice` flag, default `ianus.platform-mesh.io`) and reconciles per logical cluster via `mgr.GetCluster(ctx, req.ClusterName)`. Reconciler logic lives in **`operator/ianus/controller.go`** (`ModelReconciler`, using `mcbuilder`/`mcreconcile` types) — separate from `cmd/ianus` but same Go module, not a submodule.
+`cmd/ianus/main.go` builds a **kcp-aware** manager (`sigs.k8s.io/multicluster-runtime` + `github.com/kcp-dev/multicluster-provider`), not a plain controller-runtime manager. It watches an `APIExportEndpointSlice` (name = `--endpointslice` flag, default `ianus.platform-mesh.io`) and reconciles per logical cluster via `mgr.GetCluster(ctx, req.ClusterName)`. Reconciler logic lives in **`operator/ianus/`** (one file per kind, using `mcbuilder`/`mcreconcile` types) — separate from `cmd/ianus` but same Go module, not a submodule.
 
-The single CRD is `Model` (group `ianus.platform-mesh.io/v1alpha1`, defined in `apis/ianus/v1alpha1/model_types.go`): `Spec.Intent` + `Spec.SecretRefs`, `Status.Result`. The current reconciler is intentionally a placeholder — it just sets `Status.Result` to a canned string when `Intent` is set and `Result` is empty. There is no real simulation/twin orchestration wired in yet.
+There used to be a placeholder `Model` CRD (`Spec.Intent` string, canned-string reconciler) — removed (2026-09-07, no longer used once the real SIMOD CRDs below existed) along with its reconciler and RBAC/APIExport entries. Don't reintroduce a generic `Model`/`Intent` type; extend the SIMOD CRDs or add a new typed one instead.
+
+### SIMOD CRDs: native Go client, one CRD per backend resource
+
+`Component`, `DigitalTwin`, `ExecutionParameter`, `Simulation` (same group/version, `apis/ianus/v1alpha1/{component,digitaltwin,executionparameter,simulation}_types.go`) each have a real reconciler (`operator/ianus/{component,digitaltwin,executionparameter,simulation}_controller.go`) that drives the `ianus-simod` backend's token-based `/api/platform/...` "Platform API" — no Python involved. `pkg/simod/client.go` is the native Go HTTP client (`Login`, `CreateComponent`, `CreateDigitalTwin`, `CreateExecutionParameter`, `CreateSimulation`), the Go counterpart to `ecotwin/common/api_connector.py`'s `JobHandler` (that Python client remains a prototype, untouched). Base URL is `--simod-base-url` on `cmd/ianus` (default `https://backend.simod.de`).
+
+These form a dependency chain via same-namespace cross-refs, resolved by `Get`-ing the referenced CR and requeuing (`RequeueAfter`) until its `Status.Phase == "Ready"`: `Component` (optionally referencing child `Component`s via `Spec.Components`) → `DigitalTwin` (`Spec.ComponentRef`) → `Simulation` (`Spec.DigitalTwinRef` + `Spec.ExecutionParameterRef`); `ExecutionParameter` has no local dependency (`Spec.FormID` is a raw backend uuid — `Form`/`ComponentType`/`Material`/`SimulationFile` are backend-only reference data, not modeled as CRDs). None of the backend Platform API endpoints support update/delete, so reconciliation is create-once: a reconciler no-ops once its ID/token status field is set, and there are no finalizers. Credentials come from `Spec.SecretRefs[0]` → a same-namespace `Secret` with `email`/`password` keys, logged in fresh per reconcile (no token caching yet).
+
+**kcp gotcha, verified against a live local Platform Mesh (2026-09-07):** a bound consumer workspace's `Secret`s are invisible to the provider's operator by default — kcp's APIExport virtual workspace only exposes core resources the export explicitly requests via `spec.permissionClaims`, and the consumer's `APIBinding` must separately accept the same claim (`spec.permissionClaims[].state: Accepted`, with a `selector` — `{matchAll: true}` works) before the operator's `client.Get` on a `Secret` stops 404ing as "no REST mapping". `config/kcp/apiexport-ianus.platform-mesh.io.yaml` claims `secrets` (`get`/`list`/`watch`) alongside the pre-existing `events` claim for exactly this reason — any new CRD whose reconciler reads a core-group resource from the consumer workspace needs the same treatment, on both the APIExport (provider side, this repo) and every consumer's APIBinding (their side, out of this repo's control).
 
 ### Codegen pipeline — edit apis/, never hand-edit generated YAML
 
@@ -77,11 +87,10 @@ It then waits for the `ianus-controller-token` ServiceAccount token Secret and w
 
 ### Python: two entry points, one broken
 
-- `ecotwin/scripts/twinctl.py` is the real `twinctl` Typer CLI (PEP 723 inline-script, run via `uv run`). Subcommands lazily import `ecotwin/info/group.py` (`info system`, `info models`) and `ecotwin/login/store.py` (`login store`, persists SR credentials to `~/.config/ecotwin/.env`).
+- `ecotwin/scripts/twinctl.py` is the real `twinctl` Typer CLI (PEP 723 inline-script, run via `uv run`). Subcommands lazily import `ecotwin/info/group.py` (`info system`, `info models`), `ecotwin/login/store.py` (`login store`, persists SR credentials to `~/.config/ecotwin/.env`), and `ecotwin/submission/group.py` (`submission submit`, the token-based "full submission" API call — builds geometry, freezes a twin, creates a simulation in one call).
 - **Gotcha**: `pyproject.toml` declares the console-script entry point as `twinctl = "ecotwin.twinctl:twinctl"`, but no `ecotwin/twinctl.py` module exists — this entry point is dead. Always invoke via `uv run ecotwin/scripts/twinctl.py`, not the installed `twinctl` shim.
 - `ecotwin/api_server.py` is the FastAPI "Digital Twin API" from the README. `GET /models` is currently hardcoded to `System.INT` via `ecotwin.common.api_connector.create_api_connector`.
-- `ecotwin/common/api_connector.py` is the real integration with the external SIMOD/StrömungsRaum backend (`backend.{prod,int,test,dev}.simod.de`): form-login + CSRF scraping (`BackendConnector`), token auth (`JobHandler`), and model-list scraping (`AjaxApiHandler`/`ApiHandler`). Credentials come from `EMAIL`/`PASSWD` (or `EMAIL_<SYS>`/`PASSWD_<SYS>`) env vars, loaded from root `.env` or `~/.config/ecotwin/.env`.
-- `service/` is dead scaffolding (untracked, only a stray `.pyc`) — ignore it; the real API is `ecotwin/api_server.py`.
+- `ecotwin/common/api_connector.py` is the real integration with the external SIMOD/StrömungsRaum backend (`backend.{prod,int,test,dev}.simod.de`): form-login + CSRF scraping (`BackendConnector`), token auth (`JobHandler`), and model-list scraping (`AjaxApiHandler`/`ApiHandler`). Credentials come from `EMAIL`/`PASSWD` (or `EMAIL_<SYS>`/`PASSWD_<SYS>`) env vars, loaded from root `.env` or `~/.config/ecotwin/.env`. The legacy `BackendConnector`/`AjaxApiHandler` scraping path is kept working deliberately (pass `legacy=True` to `create_api_handler()`) alongside the newer token-based API — don't remove it without an explicit ask.
 
 ### Portal: mocked data, GraphQL wiring exists but is disabled
 
@@ -90,7 +99,7 @@ It then waits for the `ianus-controller-token` ServiceAccount token Secret and w
 ### Deploy: two chart trees, only one is live
 
 - `deploy/helm/ianus-controller/` and `deploy/helm/ianus-portal/` are the real charts used to deploy this repo's images (built from `deploy/Dockerfile`, `deploy/portal.Dockerfile`, `deploy/api.Dockerfile`).
-- `charts/ianus-operator/` is stale/unrelated scaffolding — its CRDs are generic `httpbin` examples from a chart template generator, not the `ianus.platform-mesh.io` `Model` CRD. Don't treat it as the deployment path.
+- `charts/ianus-operator/` is stale/unrelated scaffolding — its CRDs are generic `httpbin` examples from a chart template generator, not this repo's real `ianus.platform-mesh.io` CRDs. Don't treat it as the deployment path.
 
 ### Docs
 
