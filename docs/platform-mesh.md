@@ -78,7 +78,8 @@ This repo's `config/provider/contentconfiguration.yaml` + `providermetadata.yaml
 You need the admin kubeconfig to create and manage provider workspaces:
 
 ```bash
-cp ../../platform-mesh/helm-charts/.secret/kcp/admin.kubeconfig kcp-admin.kubeconfig
+cd ~/repo/ecotwinRA
+cp ~/repos/ecotwin/helm-charts/.secret/kcp/admin.kubeconfig kcp-admin.kubeconfig
 export PM_KUBECONFIG="$(realpath kcp-admin.kubeconfig)"
 kind export kubeconfig --name platform-mesh --kubeconfig compute.kubeconfig
 export COMPUTE_KUBECONFIG="$(realpath compute.kubeconfig)"
