@@ -31,7 +31,9 @@ spec:
         {{- toYaml .Values.httpRoute.filters | nindent 8 }}
       {{- end }}
       matches:
+        {{- range .Values.httpRoute.pathPrefixes | default (list "/models") }}
         - path:
             type: PathPrefix
-            value: {{ .Values.httpRoute.pathPrefix | default "/models" }}
+            value: {{ . }}
+        {{- end }}
 {{- end }}

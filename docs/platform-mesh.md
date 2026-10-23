@@ -173,6 +173,112 @@ make images kind-load-all IMAGE_TAG=$IMAGE_TAG
 KUBECONFIG=$COMPUTE_KUBECONFIG kubectl rollout restart deployment -n provider-models
 ```
 
+## Injection Molding Service Provider
+
+A second, independent provider ("IANUS Simulation - Injection Molding Service",
+APIExport `injectionmolding.platform-mesh.io`) lives alongside `ianus` in this same repo -
+own workspace, own CRD (`InjectionMoldingService`), own operator binary/image/Helm chart. It
+doesn't create simulations itself: the operator logs into the real SIMOD backend, lists the
+account's existing Components/DigitalTwins/Simulations into `status`, and the portal shows a
+link to the SIMOD web UI (`https://<env>.simod.de/models3D`, derived from `--simod-base-url`)
+for actually creating one. See `apis/injectionmolding/v1alpha1/`,
+`operator/injectionmolding/`, `pkg/simod/client.go`'s `List*` methods, and
+`portal/src/app/injection-molding/`.
+
+Steps mirror the `ianus` walkthrough above, with its own workspace and binaries:
+
+```bash
+# 1. Create the provider workspace (sibling of `ianus`, not nested under it)
+KUBECONFIG=$PM_KUBECONFIG kubectl ws use :
+KUBECONFIG=$PM_KUBECONFIG kubectl ws create providers --type=root:providers --enter --ignore-existing
+KUBECONFIG=$PM_KUBECONFIG kubectl ws create ianus-injection-molding --type=root:provider --enter --ignore-existing
+
+# 2. Bootstrap (own binary, own workspace)
+KUBECONFIG=$PM_KUBECONFIG make init-injectionmolding HOST_OVERRIDE=https://frontproxy-front-proxy.platform-mesh-system:8443
+
+# 3. Extract the operator kubeconfig
+KUBECONFIG=$PM_KUBECONFIG kubectl get secret injectionmolding-controller-kubeconfig -n default -o jsonpath='{.data.kubeconfig}' | base64 -d > injectionmolding.kubeconfig
+
+# 4. Run locally (optional)
+KUBECONFIG=./injectionmolding.kubeconfig go run ./cmd/injectionmolding --endpointslice=injectionmolding.platform-mesh.io --simod-base-url=https://backend.dev.simod.de
+
+# 5. Build and load the image
+export IMAGE_TAG=platform-mesh
+make image-build-injectionmolding kind-load-injectionmolding IMAGE_TAG=$IMAGE_TAG
+
+# 6. Deploy
+KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create namespace provider-injection-molding
+KUBECONFIG=$COMPUTE_KUBECONFIG kubectl delete secret injectionmolding-controller-kubeconfig -n provider-injection-molding --ignore-not-found
+KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create secret generic injectionmolding-controller-kubeconfig \
+  --from-file=kubeconfig=./injectionmolding.kubeconfig -n provider-injection-molding
+
+KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade --install injectionmolding-controller ./deploy/helm/injectionmolding-controller \
+  --namespace provider-injection-molding \
+  --set image.tag=$IMAGE_TAG \
+  --set image.pullPolicy=IfNotPresent
+```
+
+`--simod-base-url` (default `https://backend.dev.simod.de`, templated via the chart's
+`controller.simodBaseURL` value) drives both the SIMOD API calls and the derived
+`status.url` link - bump it to `backend.int.simod.de` then `backend.simod.de` as
+`feat/platform-api` (on the `ianus-simod` side) moves from dev to int to prod. No code
+change needed, just a different `--set controller.simodBaseURL=...` at install time.
+
+The CR itself (`spec.secretRefs` -> a Secret with `email`/`password` from
+`~/.sicle/ecotwin-sava.yaml`'s matching `simod_api.backends.<env>` entry, same pattern as
+the SIMOD CRDs above) and `spec.refreshRequestedAt` (bumped by the portal's Refresh button,
+or by hand for testing: `kubectl patch injectionmoldingservice <name> --type=merge -p
+'{"spec":{"refreshRequestedAt":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}}'`) live in a *consumer*
+workspace that's bound the `injectionmolding.platform-mesh.io` APIExport - not in the
+provider workspace itself.
+
+### Local-sandbox-only gotchas (real dev/int/prod shouldn't hit these)
+
+Verified live against this repo's local kind cluster, talking to the real (self-signed,
+unmerged-branch) `backend.dev.simod.de`. None of this is baked into the chart, Dockerfile,
+or committed values - it's deploy-time-only and specific to a sandboxed agent environment
+that reaches `*.simod.de` through a local tunnel rather than real DNS/VPN routing. A real
+deployment with proper DNS and a CA-signed backend cert needs none of it.
+
+1. **DNS**: in this sandbox, `backend.dev.simod.de` resolves to `127.0.0.1` from *inside* the
+   kind cluster (a local-tunnel artifact), which is useless from a pod's own network
+   namespace - nothing listens on the pod's loopback. Found the tunnel's actual listener
+   reachable via the kind docker network's gateway IP instead (`docker network inspect kind`
+   -> `Gateway`), then overrode the chart's `hostAliases` value (the `common` chart's
+   `common.hostAliases` template, same mechanism `docs/platform-mesh.md`'s `ianus-controller`
+   install already uses for `root.kcp.localhost` -> the `traefik` ClusterIP) to also map
+   `backend.dev.simod.de` to that gateway IP, via a `-f overrides.yaml` passed to `helm
+   upgrade`, not a values.yaml change:
+   ```yaml
+   hostAliases:
+     enabled: true
+     entries:
+       - ip: "<traefik ClusterIP>"
+         hostnames: ["localhost", "portal.localhost", "kcp.localhost", "root.kcp.localhost"]
+       - ip: "<kind network gateway IP>"
+         hostnames: ["backend.dev.simod.de"]
+   ```
+2. **TLS trust, host-side**: `backend.dev.simod.de` serves a self-signed cert (confirmed via
+   `openssl s_client`/`curl -v`: subject == issuer). Trust it on a dev machine with:
+   ```bash
+   echo | openssl s_client -connect backend.dev.simod.de:443 -servername backend.dev.simod.de 2>/dev/null | openssl x509 > dev.simod.de.crt
+   sudo cp dev.simod.de.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates
+   ```
+3. **TLS trust, in-container**: trusting the cert on the host doesn't help the operator's
+   distroless container image, which ships its own CA bundle. Extract it, append the
+   self-signed cert, and mount the combined bundle over the image's default path via a
+   ConfigMap - again deploy-time only, not an image/chart change:
+   ```bash
+   cid=$(docker create ghcr.io/platform-mesh/injectionmolding-controller:$IMAGE_TAG)
+   docker cp "$cid:/etc/ssl/certs/ca-certificates.crt" base-ca-bundle.crt && docker rm "$cid"
+   cat base-ca-bundle.crt dev.simod.de.crt > combined-ca-bundle.crt
+   kubectl create configmap injectionmolding-dev-ca-bundle --from-file=ca-certificates.crt=combined-ca-bundle.crt -n provider-injection-molding
+   kubectl patch deployment injectionmolding-controller -n provider-injection-molding --type=json -p '[
+     {"op":"add","path":"/spec/template/spec/volumes/-","value":{"name":"dev-ca-bundle","configMap":{"name":"injectionmolding-dev-ca-bundle"}}},
+     {"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-","value":{"name":"dev-ca-bundle","mountPath":"/etc/ssl/certs/ca-certificates.crt","subPath":"ca-certificates.crt","readOnly":true}}
+   ]'
+   ```
+
 ## Debugging
 
 Assuming your provider workspace is `ianus` under the `providers` tree:

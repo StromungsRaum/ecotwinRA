@@ -1,0 +1,20 @@
+apiVersion: apis.kcp.io/v1alpha2
+kind: APIExport
+metadata:
+  labels:
+    ui.platform-mesh.io/content-for: injectionmolding.platform-mesh.io
+  name: injectionmolding.platform-mesh.io
+spec:
+  permissionClaims:
+  - resource: secrets
+    verbs:
+    - get
+    - list
+    - watch
+  resources:
+  - group: injectionmolding.platform-mesh.io
+    name: injectionmoldingservices
+    schema: v261023-4bafbec-2.injectionmoldingservices.injectionmolding.platform-mesh.io
+    storage:
+      crd: {}
+status: {}

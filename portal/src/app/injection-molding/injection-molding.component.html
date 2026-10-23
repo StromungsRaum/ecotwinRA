@@ -1,0 +1,108 @@
+<!--
+  Injection Molding Service UI - HttpBin-style: no cards by default, "+"
+  creates one. Each card: link to the SIMOD web UI, Refresh -> simulation
+  dropdown -> Monitor, then a 5s-polled status with a tick + results link
+  once complete.
+-->
+<ui5-dynamic-page>
+  <ui5-dynamic-page-title slot="titleArea">
+    <ui5-title slot="heading" level="H3">Injection Molding Service</ui5-title>
+    <ui5-label slot="subheading">IANUS Simulation - Injection Molding Service</ui5-label>
+
+    <ui5-toolbar slot="actionsBar" design="Transparent">
+      <ui5-toolbar-button text="Add" design="Emphasized" icon="add" (click)="openAddDialog()"></ui5-toolbar-button>
+    </ui5-toolbar>
+  </ui5-dynamic-page-title>
+
+  <div class="im-section">
+    @if (loading()) {
+      <div class="loading-state">
+        <ui5-text>Loading injection molding services...</ui5-text>
+      </div>
+    } @else if (services().length === 0) {
+      <div class="empty-state">
+        <ui5-title level="H5">No injection molding services yet</ui5-title>
+        <ui5-text>Click "Add" to create one and monitor a simulation.</ui5-text>
+      </div>
+    } @else {
+      <div class="im-grid">
+        @for (svc of services(); track svc.metadata.name) {
+          <div class="im-card">
+            <div class="im-card-header">
+              <ui5-title level="H5">{{ svc.metadata.name }}</ui5-title>
+              <ui5-button icon="decline" design="Transparent" tooltip="Delete" (click)="deleteService(svc)"></ui5-button>
+            </div>
+
+            @if (svc.status?.phase === 'Failed') {
+              <ui5-text class="error-text">{{ svc.status?.message }}</ui5-text>
+            } @else {
+              <ui5-button design="Transparent" icon="action" (click)="openSimodLink(svc)">
+                Create simulation on SIMOD
+              </ui5-button>
+
+              @if (!svc.spec?.simulationId) {
+                <div class="im-field">
+                  <div class="im-field-row">
+                    <ui5-label>Select a simulation</ui5-label>
+                    <ui5-button design="Transparent" icon="refresh" (click)="refresh(svc)">Refresh</ui5-button>
+                  </div>
+                  <ui5-label class="timestamp-label">Last refreshed: {{ formatTimestamp(svc.status?.lastRefreshedAt) }}</ui5-label>
+                  @if (!svc.status?.availableSimulations?.length) {
+                    <ui5-text>No simulations fetched yet - click Refresh.</ui5-text>
+                  } @else {
+                    <ui5-select (change)="onSimulationPick(svc, $event)">
+                      <ui5-option value="">Choose...</ui5-option>
+                      @for (sim of svc.status?.availableSimulations; track sim.id) {
+                        <ui5-option [value]="sim.id">{{ sim.name }} ({{ sim.status }})</ui5-option>
+                      }
+                    </ui5-select>
+                    <ui5-button design="Emphasized" (click)="monitor(svc)">Monitor</ui5-button>
+                  }
+                </div>
+              } @else if (svc.status?.monitoredSimulation; as monitored) {
+                <div class="im-field">
+                  <ui5-label>Monitoring</ui5-label>
+                  <ui5-text>{{ monitored.name }}</ui5-text>
+                  @if (monitored.complete) {
+                    <div class="im-complete-row">
+                      <ui5-icon name="accept" class="complete-icon"></ui5-icon>
+                      <ui5-text>Complete</ui5-text>
+                    </div>
+                    <ui5-button design="Emphasized" icon="action" (click)="openSimodLink(svc)">
+                      View results
+                    </ui5-button>
+                  } @else {
+                    <ui5-text>Status: {{ monitored.status }} (polling every 5s)</ui5-text>
+                  }
+                  <ui5-label class="timestamp-label">Last checked: {{ formatTimestamp(monitored.lastPolledAt) }}</ui5-label>
+                </div>
+              }
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+</ui5-dynamic-page>
+
+<ui5-dialog
+  header-text="Add Injection Molding Service"
+  [open]="showAddDialog()"
+  (close)="closeAddDialog()"
+>
+  <div class="dialog-content">
+    <div class="form-field">
+      <ui5-label for="service-name" required>Name</ui5-label>
+      <ui5-input
+        id="service-name"
+        placeholder="Enter a name"
+        [value]="newServiceName()"
+        (input)="onNameInput($event)"
+      ></ui5-input>
+    </div>
+  </div>
+  <div slot="footer" class="dialog-footer">
+    <ui5-button design="Transparent" (click)="closeAddDialog()">Cancel</ui5-button>
+    <ui5-button design="Emphasized" (click)="confirmAdd()">Add</ui5-button>
+  </div>
+</ui5-dialog>

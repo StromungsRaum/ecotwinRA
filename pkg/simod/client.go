@@ -115,6 +115,37 @@ func (c *Client) post(ctx context.Context, token, path string, reqBody, respBody
 	return nil
 }
 
+// get sends an authenticated GET and decodes the JSON response into
+// respBody. Every /api/platform/... list endpoint wraps its array in a
+// Laravel AnonymousResourceCollection, which serializes as {"data": [...]}
+// (confirmed: no withoutWrapping() anywhere in ianus-simod's feat/platform-api
+// branch, so the default wrapping applies) - callers decode into a
+// `struct{ Data []T }`.
+func (c *Client) get(ctx context.Context, token, path string, respBody any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+path, nil)
+	if err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("%s: unexpected status %d: %s", path, resp.StatusCode, body)
+	}
+
+	if err := json.Unmarshal(body, respBody); err != nil {
+		return fmt.Errorf("%s: decode response: %w", path, err)
+	}
+	return nil
+}
+
 // ComponentRequest is the payload for POST /api/platform/components.
 type ComponentRequest struct {
 	Name          string            `json:"name"`
@@ -142,6 +173,18 @@ func (c *Client) CreateComponent(ctx context.Context, token string, req Componen
 	return &out, nil
 }
 
+// ListComponents calls GET /api/platform/components, returning every
+// Component belonging to the authenticated user's company.
+func (c *Client) ListComponents(ctx context.Context, token string) ([]ComponentResponse, error) {
+	var out struct {
+		Data []ComponentResponse `json:"data"`
+	}
+	if err := c.get(ctx, token, "/api/platform/components", &out); err != nil {
+		return nil, err
+	}
+	return out.Data, nil
+}
+
 // DigitalTwinRequest is the payload for POST /api/platform/digital_twins.
 type DigitalTwinRequest struct {
 	Name        string `json:"name"`
@@ -163,6 +206,18 @@ func (c *Client) CreateDigitalTwin(ctx context.Context, token string, req Digita
 		return nil, err
 	}
 	return &out, nil
+}
+
+// ListDigitalTwins calls GET /api/platform/digital_twins, returning every
+// DigitalTwin belonging to the authenticated user's company.
+func (c *Client) ListDigitalTwins(ctx context.Context, token string) ([]DigitalTwinResponse, error) {
+	var out struct {
+		Data []DigitalTwinResponse `json:"data"`
+	}
+	if err := c.get(ctx, token, "/api/platform/digital_twins", &out); err != nil {
+		return nil, err
+	}
+	return out.Data, nil
 }
 
 // ExecutionParameterRequest is the payload for POST /api/platform/execution_parameters.
@@ -210,4 +265,29 @@ func (c *Client) CreateSimulation(ctx context.Context, token string, req Simulat
 		return nil, err
 	}
 	return &out, nil
+}
+
+// ListSimulations calls GET /api/platform/simulations, returning every
+// Simulation belonging to the authenticated user's company.
+func (c *Client) ListSimulations(ctx context.Context, token string) ([]SimulationResponse, error) {
+	var out struct {
+		Data []SimulationResponse `json:"data"`
+	}
+	if err := c.get(ctx, token, "/api/platform/simulations", &out); err != nil {
+		return nil, err
+	}
+	return out.Data, nil
+}
+
+// GetSimulation calls GET /api/platform/simulations/{id}, returning the
+// current state of a single Simulation. Used to poll a monitored
+// simulation's status.
+func (c *Client) GetSimulation(ctx context.Context, token, id string) (*SimulationResponse, error) {
+	var out struct {
+		Data SimulationResponse `json:"data"`
+	}
+	if err := c.get(ctx, token, "/api/platform/simulations/"+id, &out); err != nil {
+		return nil, err
+	}
+	return &out.Data, nil
 }

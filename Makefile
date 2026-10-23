@@ -43,6 +43,10 @@ GOFMT = $(GOCMD) fmt
 BINARY_NAME = ianus
 INIT_BINARY_NAME = ianus-init
 
+# Injection Molding Service provider binary names
+IM_BINARY_NAME = injectionmolding
+IM_INIT_BINARY_NAME = injectionmolding-init
+
 # Build directory
 BUILD_DIR = bin
 
@@ -61,6 +65,10 @@ PORTAL_PORT ?= 4200
 API_IMAGE_NAME ?= ianus-api
 API_IMAGE ?= $(IMAGE_REGISTRY)/$(API_IMAGE_NAME):$(IMAGE_TAG)
 API_PORT ?= 8000
+
+# Injection Molding Service provider image parameters
+IM_IMAGE_NAME ?= injectionmolding-controller
+IM_IMAGE ?= $(IMAGE_REGISTRY)/$(IM_IMAGE_NAME):$(IMAGE_TAG)
 
 .PHONY: all
 all: build
@@ -90,20 +98,59 @@ HOST_OVERRIDE ?=
 init: build-init
 	$(BUILD_DIR)/$(INIT_BINARY_NAME) $(if $(HOST_OVERRIDE),--host-override=$(HOST_OVERRIDE))
 
-## generate: Generate code (deepcopy, etc.) and kcp resources
+## build-operator-injectionmolding: Build the injectionmolding operator binary
+.PHONY: build-operator-injectionmolding
+build-operator-injectionmolding: fmt vet
+	$(GOBUILD) -o $(BUILD_DIR)/$(IM_BINARY_NAME) ./cmd/injectionmolding/...
+
+## build-init-injectionmolding: Build the injectionmolding init/bootstrap binary
+.PHONY: build-init-injectionmolding
+build-init-injectionmolding: fmt vet
+	$(GOBUILD) -o $(BUILD_DIR)/$(IM_INIT_BINARY_NAME) ./cmd/injectionmolding-init/...
+
+## build-injectionmolding: Build both injectionmolding binaries (operator + init)
+.PHONY: build-injectionmolding
+build-injectionmolding: build-operator-injectionmolding build-init-injectionmolding
+
+## run-injectionmolding: Run the injectionmolding operator locally
+.PHONY: run-injectionmolding
+run-injectionmolding: fmt vet
+	$(GORUN) ./cmd/injectionmolding/main.go --endpointslice=injectionmolding.platform-mesh.io
+
+## init-injectionmolding: Bootstrap injectionmolding provider resources into workspace (requires KUBECONFIG, optional HOST_OVERRIDE)
+.PHONY: init-injectionmolding
+init-injectionmolding: build-init-injectionmolding
+	$(BUILD_DIR)/$(IM_INIT_BINARY_NAME) $(if $(HOST_OVERRIDE),--host-override=$(HOST_OVERRIDE))
+
+## generate: Generate code (deepcopy, etc.) and kcp resources for the ianus provider
 .PHONY: generate
 generate: $(CONTROLLER_GEN) manifests apiresourceschemas
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./apis/..."
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./apis/ianus/..."
 
-## manifests: Generate CRD manifests
+## manifests: Generate CRD manifests for the ianus provider
 .PHONY: manifests
 manifests: $(CONTROLLER_GEN)
-	$(CONTROLLER_GEN) crd paths="./apis/..." output:crd:artifacts:config=config/crds
+	$(CONTROLLER_GEN) crd paths="./apis/ianus/..." output:crd:artifacts:config=config/crds
 
-## apiresourceschemas: Generate APIResourceSchemas from CRDs
+## apiresourceschemas: Generate APIResourceSchemas from CRDs for the ianus provider
 .PHONY: apiresourceschemas
 apiresourceschemas: manifests $(APIGEN)
 	$(APIGEN) --input-dir=config/crds --output-dir=config/kcp
+
+## generate-injectionmolding: Generate code (deepcopy, etc.) and kcp resources for the injectionmolding provider
+.PHONY: generate-injectionmolding
+generate-injectionmolding: $(CONTROLLER_GEN) manifests-injectionmolding apiresourceschemas-injectionmolding
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./apis/injectionmolding/..."
+
+## manifests-injectionmolding: Generate CRD manifests for the injectionmolding provider
+.PHONY: manifests-injectionmolding
+manifests-injectionmolding: $(CONTROLLER_GEN)
+	$(CONTROLLER_GEN) crd paths="./apis/injectionmolding/..." output:crd:artifacts:config=config/crds-injectionmolding
+
+## apiresourceschemas-injectionmolding: Generate APIResourceSchemas from CRDs for the injectionmolding provider
+.PHONY: apiresourceschemas-injectionmolding
+apiresourceschemas-injectionmolding: manifests-injectionmolding $(APIGEN)
+	$(APIGEN) --input-dir=config/crds-injectionmolding --output-dir=config/kcp-injectionmolding
 
 ## fmt: Run go fmt
 .PHONY: fmt
@@ -150,13 +197,23 @@ api-image-build:
 api-image-push: api-image-build
 	docker push $(API_IMAGE)
 
+## image-build-injectionmolding: Build injectionmolding controller container image locally
+.PHONY: image-build-injectionmolding
+image-build-injectionmolding:
+	docker build -t $(IM_IMAGE) -f deploy/injectionmolding.Dockerfile .
+
+## image-push-injectionmolding: Push injectionmolding controller container image to registry
+.PHONY: image-push-injectionmolding
+image-push-injectionmolding: image-build-injectionmolding
+	docker push $(IM_IMAGE)
+
 ## images: Build all container images
 .PHONY: images
-images: image-build portal-image-build
+images: image-build portal-image-build image-build-injectionmolding
 
 ## images-push: Push all container images
 .PHONY: images-push
-images-push: image-push portal-image-push
+images-push: image-push portal-image-push image-push-injectionmolding
 
 # Kind cluster parameters
 KIND_CLUSTER ?= platform-mesh
@@ -176,9 +233,14 @@ kind-load-portal: portal-image-build
 kind-load-api: api-image-build
 	kind load docker-image $(API_IMAGE) --name $(KIND_CLUSTER)
 
+## kind-load-injectionmolding: Load injectionmolding controller image into kind cluster
+.PHONY: kind-load-injectionmolding
+kind-load-injectionmolding: image-build-injectionmolding
+	kind load docker-image $(IM_IMAGE) --name $(KIND_CLUSTER)
+
 ## kind-load-all: Load all images into kind cluster
 .PHONY: kind-load-all
-kind-load-all: kind-load kind-load-portal
+kind-load-all: kind-load kind-load-portal kind-load-injectionmolding
 
 ## portal-run: Run portal container locally (accessible at http://localhost:$(PORTAL_PORT))
 .PHONY: portal-run

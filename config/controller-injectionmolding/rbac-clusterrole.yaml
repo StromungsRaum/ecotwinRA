@@ -1,0 +1,26 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: injectionmolding-controller
+rules:
+  # Full access to the InjectionMoldingService resource
+  - apiGroups: ["injectionmolding.platform-mesh.io"]
+    resources: ["injectionmoldingservices"]
+    verbs: ["list", "get", "watch"]
+  - apiGroups: ["injectionmolding.platform-mesh.io"]
+    resources: ["injectionmoldingservices/status"]
+    verbs: ["get", "update", "patch"]
+  # Events
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  # Access to APIExport for controller operations
+  - apiGroups: ["apis.kcp.io"]
+    resources: ["apiexports"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apis.kcp.io"]
+    resources: ["apiexports/content"]
+    verbs: ["*"]
+  - apiGroups: ["apis.kcp.io"]
+    resources: ["apiexportendpointslices"]
+    verbs: ["get", "list", "watch"]

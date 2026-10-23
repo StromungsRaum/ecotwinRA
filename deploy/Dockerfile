@@ -8,6 +8,8 @@ ARG BUILD_DATE=unknown
 
 WORKDIR /workspace
 
+ENV GOTOOLCHAIN=auto
+
 COPY go.mod go.sum ./
 RUN go mod download
 

@@ -55,7 +55,9 @@ httpRoute:
       kind: Gateway
       name: k8sapi-gateway
       namespace: platform-mesh-system
-  pathPrefix: /models
+  pathPrefixes:
+    - /models
+    - /injection-molding
   filters:
     - extensionRef:
         group: traefik.io

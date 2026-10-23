@@ -96,7 +96,7 @@ func Bootstrap(ctx context.Context, config *rest.Config, hostOverride string) er
 
 	// Create kubeconfig secret for controller
 	logger.Info("Creating controller kubeconfig secret")
-	if err := createControllerKubeconfigSecret(ctx, kubeClient, config, hostOverride); err != nil {
+	if err := createControllerKubeconfigSecret(ctx, kubeClient, config, hostOverride, "default", "ianus-controller-token", "ianus-controller-kubeconfig"); err != nil {
 		return fmt.Errorf("failed to create controller kubeconfig secret: %w", err)
 	}
 
@@ -105,14 +105,17 @@ func Bootstrap(ctx context.Context, config *rest.Config, hostOverride string) er
 }
 
 // createControllerKubeconfigSecret creates a Secret containing a kubeconfig
-// that the controller can use to connect to the workspace from outside.
-func createControllerKubeconfigSecret(ctx context.Context, client kubernetes.Interface, config *rest.Config, hostOverride string) error {
+// that the controller can use to connect to the workspace from outside. It
+// waits for tokenSecretName (created by the ServiceAccount token Secret
+// resource bootstrapped from the controller config set) to be populated,
+// then writes kubeconfigSecretName in namespace.
+func createControllerKubeconfigSecret(ctx context.Context, client kubernetes.Interface, config *rest.Config, hostOverride, namespace, tokenSecretName, kubeconfigSecretName string) error {
 	logger := klog.FromContext(ctx)
 
 	// Wait for the service account token secret to be populated
 	var tokenSecret *corev1.Secret
 	err := wait.PollUntilContextTimeout(ctx, time.Second, 30*time.Second, true, func(ctx context.Context) (bool, error) {
-		secret, err := client.CoreV1().Secrets("default").Get(ctx, "ianus-controller-token", metav1.GetOptions{})
+		secret, err := client.CoreV1().Secrets(namespace).Get(ctx, tokenSecretName, metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				logger.V(2).Info("waiting for service account token secret to be created")
@@ -176,8 +179,8 @@ func createControllerKubeconfigSecret(ctx context.Context, client kubernetes.Int
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ianus-controller-kubeconfig",
-			Namespace: "default",
+			Name:      kubeconfigSecretName,
+			Namespace: namespace,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
@@ -185,16 +188,16 @@ func createControllerKubeconfigSecret(ctx context.Context, client kubernetes.Int
 		},
 	}
 
-	_, err = client.CoreV1().Secrets("default").Create(ctx, secret, metav1.CreateOptions{})
+	_, err = client.CoreV1().Secrets(namespace).Create(ctx, secret, metav1.CreateOptions{})
 	if err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			logger.Info("kubeconfig secret already exists, updating")
-			existing, err := client.CoreV1().Secrets("default").Get(ctx, secret.Name, metav1.GetOptions{})
+			existing, err := client.CoreV1().Secrets(namespace).Get(ctx, secret.Name, metav1.GetOptions{})
 			if err != nil {
 				return fmt.Errorf("failed to get existing secret: %w", err)
 			}
 			secret.ResourceVersion = existing.ResourceVersion
-			if _, err = client.CoreV1().Secrets("default").Update(ctx, secret, metav1.UpdateOptions{}); err != nil {
+			if _, err = client.CoreV1().Secrets(namespace).Update(ctx, secret, metav1.UpdateOptions{}); err != nil {
 				return fmt.Errorf("failed to update secret: %w", err)
 			}
 			logger.Info("updated kubeconfig secret")

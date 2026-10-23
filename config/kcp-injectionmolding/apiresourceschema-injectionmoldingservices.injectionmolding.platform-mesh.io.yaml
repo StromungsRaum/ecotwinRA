@@ -1,0 +1,183 @@
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIResourceSchema
+metadata:
+  name: v261023-4bafbec-2.injectionmoldingservices.injectionmolding.platform-mesh.io
+spec:
+  group: injectionmolding.platform-mesh.io
+  names:
+    kind: InjectionMoldingService
+    listKind: InjectionMoldingServiceList
+    plural: injectionmoldingservices
+    singular: injectionmoldingservice
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.url
+      name: URL
+      type: string
+    name: v1alpha1
+    schema:
+      description: InjectionMoldingService is the Schema for the injectionmoldingservices
+        API
+      properties:
+        apiVersion:
+          description: |-
+            APIVersion defines the versioned schema of this representation of an object.
+            Servers should convert recognized schemas to the latest internal value, and
+            may reject unrecognized values.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+          type: string
+        kind:
+          description: |-
+            Kind is a string value representing the REST resource this object represents.
+            Servers may infer this from the endpoint the client submits requests to.
+            Cannot be updated.
+            In CamelCase.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: |-
+            InjectionMoldingServiceSpec defines the desired state of InjectionMoldingService.
+            Each InjectionMoldingService monitors at most one SIMOD Simulation - like
+            HttpBin, the portal creates one of these per card via its "+" button, not
+            one shared resource per account.
+          properties:
+            refreshRequestedAt:
+              description: |-
+                RefreshRequestedAt is bumped by the UI's Refresh button (e.g. to an RFC3339
+                timestamp) to request the reconciler re-fetch the account's Simulations
+                from the SIMOD backend, to populate status.availableSimulations for the
+                portal's selection dropdown. Any change to this value triggers a refresh;
+                the value itself is otherwise opaque.
+              type: string
+            secretRefs:
+              description: SecretRefs is an array of references to Secrets containing
+                SIMOD credentials
+              items:
+                description: |-
+                  SecretReference references a Secret by name in the same namespace as the
+                  resource that holds the reference.
+                properties:
+                  name:
+                    description: Name of the referenced Secret
+                    type: string
+                required:
+                - name
+                type: object
+              type: array
+            simulationId:
+              description: |-
+                SimulationID is the SIMOD backend uuid of the Simulation this resource
+                monitors, chosen by the user from status.availableSimulations. Once set,
+                the reconciler polls that simulation's status every 5 seconds until it
+                completes.
+              type: string
+          type: object
+        status:
+          description: InjectionMoldingServiceStatus defines the observed state of
+            InjectionMoldingService
+          properties:
+            availableSimulations:
+              description: |-
+                AvailableSimulations lists the SIMOD backend's existing Simulations for
+                this account, as of the last refresh - populates the portal's selection
+                dropdown.
+              items:
+                description: |-
+                  SimulationSummary is a condensed view of a SIMOD Simulation, enough to
+                  populate the portal's simulation dropdown.
+                properties:
+                  id:
+                    description: ID is the uuid the SIMOD backend assigned to this
+                      simulation.
+                    type: string
+                  name:
+                    description: Name is the simulation's name on the SIMOD backend.
+                    type: string
+                  status:
+                    description: Status is the simulation's current status on the
+                      SIMOD backend.
+                    type: string
+                required:
+                - id
+                - name
+                - status
+                type: object
+              type: array
+            lastProcessedRefreshRequestedAt:
+              description: |-
+                LastProcessedRefreshRequestedAt mirrors spec.refreshRequestedAt as of the
+                last successful fetch. The reconciler compares this against the current
+                spec value to decide whether a new refresh was requested, rather than
+                reacting to every reconcile (a status-only update doesn't change
+                metadata.generation, so without this marker the reconciler would re-fetch
+                on every reconcile it itself triggers).
+              type: string
+            lastRefreshedAt:
+              description: |-
+                LastRefreshedAt is the RFC3339 timestamp of the last successful
+                available-simulations fetch from the SIMOD backend.
+              type: string
+            message:
+              description: Message carries error details when Phase is Failed.
+              type: string
+            monitoredSimulation:
+              description: MonitoredSimulation is the observed state of spec.simulationId,
+                once set.
+              properties:
+                complete:
+                  description: Complete is true once Status == "complete".
+                  type: boolean
+                id:
+                  description: ID is the uuid of the monitored simulation (mirrors
+                    spec.simulationId).
+                  type: string
+                lastPolledAt:
+                  description: LastPolledAt is the RFC3339 timestamp of the last status
+                    poll.
+                  type: string
+                name:
+                  description: Name is the simulation's name on the SIMOD backend.
+                  type: string
+                resultsUrl:
+                  description: |-
+                    ResultsURL points the user at the SIMOD web UI to view/download this
+                    simulation's result files once Complete is true. The Platform API's own
+                    per-file endpoint requires the same Bearer token the operator uses, which
+                    a browser link can't supply, so this points at the SIMOD web UI instead
+                    (session-cookie authenticated, already logged in there) rather than the
+                    raw API.
+                  type: string
+                status:
+                  description: |-
+                    Status is the simulation's current status on the SIMOD backend (e.g.
+                    "processing", "complete", "canceled", "error", "contract_limit_reached").
+                  type: string
+              required:
+              - complete
+              - id
+              - name
+              - status
+              type: object
+            phase:
+              description: 'Phase is the current reconciliation phase: Pending, Ready,
+                or Failed.'
+              type: string
+            url:
+              description: |-
+                URL points the user at the SIMOD web UI to create a DigitalTwin/Simulation
+                themselves. Derived from the operator's configured SIMOD backend base URL
+                (the "backend." host prefix stripped off), not hardcoded, so it tracks
+                whichever environment (dev/int/prod) the operator is pointed at.
+              type: string
+          type: object
+      type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

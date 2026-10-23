@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	ianusv1alpha1 "github.com/StromungsRaum/ecotwinRA/apis/ianus/v1alpha1"
@@ -58,23 +57,5 @@ func loginSIMOD(ctx context.Context, cl client.Client, namespace string, secretR
 	if len(secretRefs) == 0 {
 		return nil, "", fmt.Errorf("no secretRefs configured")
 	}
-
-	secret := &corev1.Secret{}
-	key := client.ObjectKey{Namespace: namespace, Name: secretRefs[0].Name}
-	if err := cl.Get(ctx, key, secret); err != nil {
-		return nil, "", fmt.Errorf("failed to get secret %s: %w", key, err)
-	}
-
-	email := string(secret.Data["email"])
-	password := string(secret.Data["password"])
-	if email == "" || password == "" {
-		return nil, "", fmt.Errorf("secret %s must contain non-empty email and password keys", key)
-	}
-
-	simodClient := simod.NewClient(simodBaseURL)
-	token, err := simodClient.Login(ctx, email, password)
-	if err != nil {
-		return nil, "", fmt.Errorf("simod login failed: %w", err)
-	}
-	return simodClient, token, nil
+	return simod.LoginFromSecret(ctx, cl, namespace, secretRefs[0].Name, simodBaseURL)
 }

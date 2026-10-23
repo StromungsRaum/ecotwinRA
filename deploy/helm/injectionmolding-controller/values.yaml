@@ -1,0 +1,59 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/platform-mesh/injectionmolding-controller
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 65532
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Controller configuration
+controller:
+  endpointSlice: "injectionmolding.platform-mesh.io"
+  # simodBaseURL drives both the SIMOD API calls and the public models3D link
+  # (see operator/injectionmolding/simod_client.go's modelsURL) - bump this
+  # to backend.int.simod.de, then backend.simod.de, as feat/platform-api
+  # progresses from dev to int to prod. Unlike ianus-controller, this value
+  # is wired through to the binary (which has no equivalent override today).
+  simodBaseURL: "https://backend.dev.simod.de"
+
+# kcp kubeconfig secret
+kubeconfig:
+  secretName: "injectionmolding-controller-kubeconfig"
+  secretKey: "kubeconfig"

@@ -1,0 +1,46 @@
+apiVersion: ui.platform-mesh.io/v1alpha1
+kind: ContentConfiguration
+metadata:
+  labels:
+    ui.platform-mesh.io/entity: core_platform-mesh_io_account
+    ui.platform-mesh.io/content-for: injectionmolding.platform-mesh.io
+  name: injectionmolding-ui
+spec:
+  inlineConfiguration:
+    content: |-
+      {
+       "name": "injection-molding",
+       "luigiConfigFragment": {
+         "data": {
+           "nodes": [
+             {
+               "pathSegment": "injection-molding",
+               "label": "Injection Molding Service",
+               "hideFromNav": false,
+               "icon": "person-placeholder",
+               "url": "https://{context.organization}.portal.localhost:8443/injection-molding/",
+               "entityType": "main.core_platform-mesh_io_account",
+               "order": 900,
+               "context": {
+                 "accountId": ":core_platform-mesh_io_accountId"
+               }
+             }
+           ],
+           "texts": [
+             {
+               "locale": "",
+               "textDictionary": {
+                 "injection-molding": "Injection Molding Service"
+               }
+             },
+             {
+               "locale": "en",
+               "textDictionary": {
+                 "injection-molding": "Injection Molding Service"
+               }
+             }
+           ]
+         }
+       }
+      }
+    contentType: json
