@@ -20,5 +20,5 @@ import (
 	"embed"
 )
 
-//go:embed contentconfiguration.yaml providermetadata.yaml rbac.yaml
+//go:embed rbac.yaml
 var FS embed.FS

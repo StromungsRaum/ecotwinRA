@@ -153,6 +153,13 @@ export class InjectionMoldingComponent implements OnDestroy {
     }
   }
 
+  public openResultsLink(svc: InjectionMoldingService): void {
+    const url = svc.status?.monitoredSimulation?.resultsUrl;
+    if (url) {
+      window.open(url, '_blank', 'noopener');
+    }
+  }
+
   public refresh(svc: InjectionMoldingService): void {
     this.client.requestRefresh(svc.metadata.name, svc.metadata.namespace || 'default').subscribe({
       next: (ok) => {

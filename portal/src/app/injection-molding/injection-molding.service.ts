@@ -20,8 +20,8 @@
  * by this UI.
  */
 import { Injectable, inject } from '@angular/core';
-import { LuigiContextService } from '@luigi-project/client-support-angular';
-import { from, map, Observable, of, switchMap, catchError, filter } from 'rxjs';
+import { Observable, of, catchError, map } from 'rxjs';
+import { GraphQLClientService } from '../shared/graphql-client.service';
 
 const SECRET_NAME = 'simod-credentials';
 
@@ -149,54 +149,10 @@ const UPDATE_SIMULATION_MUTATION = `
   }
 `;
 
-interface GraphQLConfig {
-  endpoint: string;
-  token: string | null;
-}
-
 @Injectable({ providedIn: 'root' })
 export class InjectionMoldingServiceClient {
-  private luigiContextService = inject(LuigiContextService);
-
-  private getGraphQLConfig(): Observable<GraphQLConfig> {
-    return this.luigiContextService.contextObservable().pipe(
-      filter((ctx) => !!ctx?.context),
-      map((ctx) => {
-        const context = ctx.context as any;
-        const token = context.token || null;
-        let endpoint = context.portalContext?.crdGatewayApiUrl;
-        if (!endpoint) {
-          console.warn('crdGatewayApiUrl not found in context, falling back to default');
-          endpoint = context.portalBaseUrl + '/graphql';
-        }
-        return { endpoint, token };
-      })
-    );
-  }
-
-  private buildHeaders(token: string | null): Record<string, string> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    return headers;
-  }
-
-  private post(query: string, variables: Record<string, unknown>): Observable<any> {
-    return this.getGraphQLConfig().pipe(
-      switchMap(({ endpoint, token }) =>
-        from(
-          fetch(endpoint, {
-            method: 'POST',
-            headers: this.buildHeaders(token),
-            body: JSON.stringify({ query, variables }),
-          }).then((res) => res.json())
-        )
-      )
-    );
-  }
+  private graphql = inject(GraphQLClientService);
+  private post = (query: string, variables: Record<string, unknown>) => this.graphql.post(query, variables);
 
   list(): Observable<InjectionMoldingService[]> {
     return this.post(LIST_QUERY, {}).pipe(

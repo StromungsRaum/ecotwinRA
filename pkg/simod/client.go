@@ -173,18 +173,6 @@ func (c *Client) CreateComponent(ctx context.Context, token string, req Componen
 	return &out, nil
 }
 
-// ListComponents calls GET /api/platform/components, returning every
-// Component belonging to the authenticated user's company.
-func (c *Client) ListComponents(ctx context.Context, token string) ([]ComponentResponse, error) {
-	var out struct {
-		Data []ComponentResponse `json:"data"`
-	}
-	if err := c.get(ctx, token, "/api/platform/components", &out); err != nil {
-		return nil, err
-	}
-	return out.Data, nil
-}
-
 // DigitalTwinRequest is the payload for POST /api/platform/digital_twins.
 type DigitalTwinRequest struct {
 	Name        string `json:"name"`
@@ -206,18 +194,6 @@ func (c *Client) CreateDigitalTwin(ctx context.Context, token string, req Digita
 		return nil, err
 	}
 	return &out, nil
-}
-
-// ListDigitalTwins calls GET /api/platform/digital_twins, returning every
-// DigitalTwin belonging to the authenticated user's company.
-func (c *Client) ListDigitalTwins(ctx context.Context, token string) ([]DigitalTwinResponse, error) {
-	var out struct {
-		Data []DigitalTwinResponse `json:"data"`
-	}
-	if err := c.get(ctx, token, "/api/platform/digital_twins", &out); err != nil {
-		return nil, err
-	}
-	return out.Data, nil
 }
 
 // ExecutionParameterRequest is the payload for POST /api/platform/execution_parameters.

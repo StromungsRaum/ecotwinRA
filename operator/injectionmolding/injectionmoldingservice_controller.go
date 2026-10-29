@@ -156,7 +156,14 @@ func (r *InjectionMoldingServiceReconciler) Reconcile(ctx context.Context, req m
 			// Bearer token the operator uses, which a browser link can't
 			// supply - point at the SIMOD web UI instead, where the user is
 			// already authenticated via session cookie.
-			monitored.ResultsURL = url
+			resultsURL, err := simulationURL(sim.ID)
+			if err != nil {
+				svc.Status.Phase = phaseFailed
+				svc.Status.Message = err.Error()
+				_ = client.Status().Update(ctx, svc)
+				return reconcile.Result{}, err
+			}
+			monitored.ResultsURL = resultsURL
 		}
 		svc.Status.MonitoredSimulation = monitored
 		log.Info("Polled monitored simulation", "simulationId", sim.ID, "status", sim.Status, "complete", complete)

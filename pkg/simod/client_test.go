@@ -198,3 +198,48 @@ func TestCreateSimulation(t *testing.T) {
 		t.Fatalf("out = %+v", out)
 	}
 }
+
+func TestListSimulations(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/platform/simulations" {
+			t.Fatalf("path = %s", r.URL.Path)
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer tok-123" {
+			t.Fatalf("authorization = %q", got)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": []SimulationResponse{{ID: "sim-uuid", Name: "mold_gear", Status: "processing"}},
+		})
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL)
+	out, err := c.ListSimulations(context.Background(), "tok-123")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out) != 1 || out[0].ID != "sim-uuid" {
+		t.Fatalf("out = %+v", out)
+	}
+}
+
+func TestGetSimulation(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/platform/simulations/sim-uuid" {
+			t.Fatalf("path = %s", r.URL.Path)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": SimulationResponse{ID: "sim-uuid", Name: "mold_gear", Status: "complete"},
+		})
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL)
+	out, err := c.GetSimulation(context.Background(), "tok-123", "sim-uuid")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Status != "complete" {
+		t.Fatalf("status = %q, want complete", out.Status)
+	}
+}

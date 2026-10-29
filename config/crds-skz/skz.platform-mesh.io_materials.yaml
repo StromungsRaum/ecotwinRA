@@ -1,0 +1,80 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: materials.skz.platform-mesh.io
+spec:
+  group: skz.platform-mesh.io
+  names:
+    kind: Material
+    listKind: MaterialList
+    plural: materials
+    singular: material
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.name
+      name: Name
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Material is the Schema for the materials API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              MaterialSpec defines the desired state of Material.
+
+              SKZ is a dummy/demo provider: there is no real material-testing backend
+              behind this CRD, no operator, and no status - the portal fills Parameters
+              with canned placeholder values at creation time. The field is a flat
+              key/value bag rather than the real ianus-simod Platform API's sectioned
+              `POST /api/platform/materials` shape (sections.{temperature,viscosity,heat,
+              injection_molding,pvt}, each {method, parameters}) deliberately - this is
+              illustrative, not a real material characterization.
+
+              NOTE: the Kind is "Material", not "MaterialParameters" - a Kind name
+              ending in "s" breaks the Platform Mesh CRD Gateway's pluralization (it
+              generates no distinct list/collection field, only a singular
+              MaterialParameters(name, namespace) getter), confirmed live against the
+              real gateway before renaming.
+            properties:
+              name:
+                description: |-
+                  Name is the material's name, e.g. "Luran 368R", chosen by the user when
+                  provisioning this material.
+                type: string
+              parameters:
+                additionalProperties:
+                  type: string
+                description: |-
+                  Parameters are dummy material parameter values keyed by name (e.g.
+                  "density", "meltTemperature"). Filled in by the portal with placeholder
+                  values, not measured data.
+                type: object
+            required:
+            - name
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources: {}

@@ -1,0 +1,68 @@
+<!--
+  SKZ Materials UI - dummy/demo provider: "+" creates a card with just a
+  material name; parameters are canned placeholder values (see skz.service.ts).
+-->
+<ui5-dynamic-page>
+  <ui5-dynamic-page-title slot="titleArea">
+    <ui5-title slot="heading" level="H3">SKZ Materials</ui5-title>
+    <ui5-label slot="subheading">SKZ - Das Kunststoff-Zentrum (demo)</ui5-label>
+
+    <ui5-toolbar slot="actionsBar" design="Transparent">
+      <ui5-toolbar-button text="Add" design="Emphasized" icon="add" (click)="openAddDialog()"></ui5-toolbar-button>
+    </ui5-toolbar>
+  </ui5-dynamic-page-title>
+
+  <div class="skz-section">
+    @if (loading()) {
+      <div class="loading-state">
+        <ui5-text>Loading materials...</ui5-text>
+      </div>
+    } @else if (materials().length === 0) {
+      <div class="empty-state">
+        <ui5-title level="H5">No materials yet</ui5-title>
+        <ui5-text>Click "Add" to register a material's parameters.</ui5-text>
+      </div>
+    } @else {
+      <div class="skz-grid">
+        @for (material of materials(); track material.metadata.name) {
+          <div class="skz-card">
+            <div class="skz-card-header">
+              <ui5-title level="H5">{{ material.spec?.name }}</ui5-title>
+              <ui5-button icon="decline" design="Transparent" tooltip="Delete" (click)="deleteMaterial(material)"></ui5-button>
+            </div>
+            <div class="skz-field">
+              @for (entry of (material.spec?.parameters | keyvalue); track entry.key) {
+                <div class="skz-param-row">
+                  <ui5-label>{{ entry.key }}</ui5-label>
+                  <ui5-text>{{ entry.value }}</ui5-text>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</ui5-dynamic-page>
+
+<ui5-dialog
+  header-text="Add Material"
+  [open]="showAddDialog()"
+  (close)="closeAddDialog()"
+>
+  <div class="dialog-content">
+    <div class="form-field">
+      <ui5-label for="material-name" required>Material Name</ui5-label>
+      <ui5-input
+        id="material-name"
+        placeholder="e.g. Luran 368R"
+        [value]="newMaterialName()"
+        (input)="onNameInput($event)"
+      ></ui5-input>
+    </div>
+  </div>
+  <div slot="footer" class="dialog-footer">
+    <ui5-button design="Transparent" (click)="closeAddDialog()">Cancel</ui5-button>
+    <ui5-button design="Emphasized" (click)="confirmAdd()">Add</ui5-button>
+  </div>
+</ui5-dialog>

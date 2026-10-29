@@ -69,3 +69,19 @@ func modelsURL() (string, error) {
 	u.Path = "/models3D"
 	return u.String(), nil
 }
+
+// simulationURL derives the public SIMOD web UI link for a single
+// simulation's results page from the configured SIMOD backend base URL,
+// e.g. https://backend.dev.simod.de -> https://dev.simod.de/simulation/<id>.
+// id is the Platform API's Simulation.ID, which is already the backend's
+// simulation uuid (ianus-simod's SimulationResource serializes the uuid
+// column as "id" - see pkg/simod/client.go's SimulationResponse).
+func simulationURL(id string) (string, error) {
+	u, err := url.Parse(simodBaseURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid simod base url %q: %w", simodBaseURL, err)
+	}
+	u.Host = strings.TrimPrefix(u.Host, "backend.")
+	u.Path = "/simulation/" + id
+	return u.String(), nil
+}

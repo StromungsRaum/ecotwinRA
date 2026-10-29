@@ -47,6 +47,9 @@ INIT_BINARY_NAME = ianus-init
 IM_BINARY_NAME = injectionmolding
 IM_INIT_BINARY_NAME = injectionmolding-init
 
+# SKZ provider binary name (dummy/demo provider, no operator - bootstrap only)
+SKZ_INIT_BINARY_NAME = skz-init
+
 # Build directory
 BUILD_DIR = bin
 
@@ -151,6 +154,31 @@ manifests-injectionmolding: $(CONTROLLER_GEN)
 .PHONY: apiresourceschemas-injectionmolding
 apiresourceschemas-injectionmolding: manifests-injectionmolding $(APIGEN)
 	$(APIGEN) --input-dir=config/crds-injectionmolding --output-dir=config/kcp-injectionmolding
+
+## build-init-skz: Build the skz init/bootstrap binary (no operator - skz is a dummy provider)
+.PHONY: build-init-skz
+build-init-skz: fmt vet
+	$(GOBUILD) -o $(BUILD_DIR)/$(SKZ_INIT_BINARY_NAME) ./cmd/skz-init/...
+
+## init-skz: Bootstrap skz provider resources into workspace (requires KUBECONFIG, optional HOST_OVERRIDE)
+.PHONY: init-skz
+init-skz: build-init-skz
+	$(BUILD_DIR)/$(SKZ_INIT_BINARY_NAME) $(if $(HOST_OVERRIDE),--host-override=$(HOST_OVERRIDE))
+
+## generate-skz: Generate code (deepcopy, etc.) and kcp resources for the skz provider
+.PHONY: generate-skz
+generate-skz: $(CONTROLLER_GEN) manifests-skz apiresourceschemas-skz
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./apis/skz/..."
+
+## manifests-skz: Generate CRD manifests for the skz provider
+.PHONY: manifests-skz
+manifests-skz: $(CONTROLLER_GEN)
+	$(CONTROLLER_GEN) crd paths="./apis/skz/..." output:crd:artifacts:config=config/crds-skz
+
+## apiresourceschemas-skz: Generate APIResourceSchemas from CRDs for the skz provider
+.PHONY: apiresourceschemas-skz
+apiresourceschemas-skz: manifests-skz $(APIGEN)
+	$(APIGEN) --input-dir=config/crds-skz --output-dir=config/kcp-skz
 
 ## fmt: Run go fmt
 .PHONY: fmt

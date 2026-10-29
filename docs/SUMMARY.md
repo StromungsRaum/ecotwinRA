@@ -4,6 +4,7 @@
 
 - [Funding](./funding.md)
 - [Platform Mesh](./platform-mesh.md)
+  - [Quick Start](./quick_start.md)
 
 ## Concepts
 
