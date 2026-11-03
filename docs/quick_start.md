@@ -178,24 +178,195 @@ KUBECONFIG=$COMPUTE_KUBECONFIG kubectl get pods -n provider-injection-molding
 Open <https://portal.localhost:8443>, log in, and the `ianus` and injection-molding provider
 UIs should appear once an account workspace binds their APIExports.
 
-## 7. Optional: the real SIMOD backend
+## 7. Run the StrömungsRaum frontend and backend locally
 
 The providers' controllers and CRDs (`Component`, `DigitalTwin`, `ExecutionParameter`, `Simulation`,
 `InjectionMoldingService`) talk to the external StrömungsRaum/SIMOD backend
 (`backend.{dev,test,int,prod}.simod.de`) for anything beyond bootstrap/registration — login,
-creating components/twins/simulations, listing existing ones. That backend is a separate Laravel
-app (`ianus-simod` repo, not part of this one) with its own local setup; without it reachable, the
-CRDs will register fine but their reconcilers will fail to authenticate. Credentials go in a
-same-namespace `Secret` with `email`/`password` keys, referenced by each CR's `spec.secretRefs[0]`.
+creating components/twins/simulations, listing existing ones. That backend (+ its frontend) is a
+separate Laravel/Vue app, the `ianus-simod` repo (not part of this one), with its own docker-compose
+stack. Without it running, the CRDs above still register fine but their reconcilers fail to
+authenticate. This section reproduces the `dev` stack the way it's actually configured on this
+machine — full details and troubleshooting live in that repo's own
+[docs/SETUP.md](https://github.com/StromungsRaum/ianus-simod/blob/main/docs/SETUP.md), don't
+duplicate them here.
 
-If you're pointing at a self-signed/local instance of that backend rather than a real
-`*.simod.de` environment, see the "Local-sandbox-only gotchas" section in
+The optional **cadbuilder** and **stlbuilder** container overlays need to be enabled
+(visible as the `dev-simod-cadbuilder-1`/`dev-simod-stlbuilder-1` containers).
+
+### 7a. Access
+
+- Frontend: <https://dev.simod.de>
+- Backend admin: <https://backend.dev.simod.de>
+- phpMyAdmin: `127.0.0.1:8082`
+- MailHog (dev mail capture): <http://localhost:8025>
+
+### 7b. Wiring this provider repo to it
+
+Point the `ecotwinRA` operators/CRDs at this local backend instead of `backend.dev.simod.de`
+directly if you want an isolated loop:
+
+```shell
+KUBECONFIG=./operator.kubeconfig go run ./cmd/ianus --endpointslice=ianus.platform-mesh.io --simod-base-url=https://backend.dev.simod.de
+KUBECONFIG=./injectionmolding.kubeconfig go run ./cmd/injectionmolding --endpointslice=injectionmolding.platform-mesh.io --simod-base-url=https://backend.dev.simod.de
+```
+
+Credentials go in a same-namespace `Secret` with `email`/`password` keys, referenced by each CR's
+`spec.secretRefs[0]` — create a user via step 7d first.
+
+If the provider's controller runs **inside the kind cluster** (not `go run` on the host) talking to
+this same-machine backend, see the "Local-sandbox-only gotchas" section in
 [platform-mesh.md](./platform-mesh.md#local-sandbox-only-gotchas-real-devintprod-shouldnt-hit-these)
-for the DNS/TLS workarounds that entails (host aliases, trusting a self-signed cert on the host
+for the DNS/TLS workarounds that entails (host aliases, trusting the self-signed cert on the host
 and inside the controller's container image).
 
-## 8. Cleanup
+## 8. Install the Slurm scheduler
+
+The backend's "act as cluster" feature (`Kunden Firmen / Benutzer` → `Cluster Computer` permission,
+`Cluster / Clusterliste`) submits simulation jobs to a Slurm cluster. This section installs just the
+Slurm scheduler itself, as a single-node cluster — matching how it's actually set up on this
+machine (native systemd services, not containers). It does **not** cover the separate job-execution
+layer (the private `runner`/`simodlib`/`simodclustercomponents` repos and the `sicle` config bundle)
+that turns a submitted Slurm job into an actual running simulation — that's a different, private
+piece of the pipeline, out of scope here.
+
+### 8a. Install packages
+
+```shell
+sudo apt-get update
+sudo apt-get install -y munge slurmd slurmctld slurmdbd mariadb-server
+```
+
+### 8b. Munge (inter-daemon authentication)
+
+```shell
+sudo systemctl enable --now munge
+systemctl status munge --no-pager
+```
+
+A single-node setup works with the key `apt` generated for you at `/etc/munge/munge.key` — nothing
+further to do unless you're joining more than one node to the cluster.
+
+### 8c. Accounting database
+
+Slurm's accounting (`AccountingStorageType=accounting_storage/slurmdbd`) needs its own MariaDB
+database and user:
+
+```shell
+sudo mysql -e "CREATE DATABASE slurm_acct_db;"
+sudo mysql -e "CREATE USER 'slurm'@'localhost' IDENTIFIED BY '<pick-a-password>';"
+sudo mysql -e "GRANT ALL PRIVILEGES ON slurm_acct_db.* TO 'slurm'@'localhost';"
+```
+
+### 8d. `/etc/slurm/slurmdbd.conf`
+
+```ini
+AuthType=auth/munge
+DbdHost=localhost
+DbdPort=6819
+SlurmUser=slurm
+StorageType=accounting_storage/mysql
+StorageHost=localhost
+StorageUser=slurm
+StoragePass=<same-password-as-above>
+StorageLoc=slurm_acct_db
+PidFile=/var/run/slurmdbd.pid
+LogFile=/var/log/slurm-llnl/slurmdbd.log
+```
+
+```shell
+sudo chown slurm:slurm /etc/slurm/slurmdbd.conf
+sudo chmod 600 /etc/slurm/slurmdbd.conf
+```
+
+### 8e. `/etc/slurm/slurm.conf`
+
+Single-node cluster where the controller and the (only) compute node are the same machine — this
+is exactly this machine's config, generalized to detect your own hostname/CPU/memory:
+
+```ini
+ClusterName=localcluster
+SlurmctldHost=<run: hostname>
+
+MpiDefault=none
+ProctrackType=proctrack/linuxproc
+ReturnToService=2
+
+SlurmctldPidFile=/var/run/slurm/slurmctld.pid
+SlurmctldPort=6817
+SlurmdPidFile=/var/run/slurm/slurmd.pid
+SlurmdPort=6818
+SlurmdSpoolDir=/var/lib/slurm-llnl/slurmd
+SlurmUser=slurm
+StateSaveLocation=/var/lib/slurm-llnl/slurmctld
+SwitchType=switch/none
+TaskPlugin=task/none
+
+InactiveLimit=0
+KillWait=30
+MinJobAge=300
+SlurmctldTimeout=120
+SlurmdTimeout=300
+Waittime=0
+
+SchedulerType=sched/backfill
+SelectType=select/cons_tres
+SelectTypeParameters=CR_Core
+
+AccountingStorageType=accounting_storage/slurmdbd
+AccountingStorageHost=<run: hostname>
+AccountingStoragePort=6819
+JobCompType=jobcomp/none
+JobAcctGatherFrequency=30
+JobAcctGatherType=jobacct_gather/linux
+SlurmctldDebug=info
+SlurmctldLogFile=/var/log/slurm-llnl/slurmctld.log
+SlurmdDebug=info
+SlurmdLogFile=/var/log/slurm-llnl/slurmd.log
+
+# Replace with: hostname, `nproc`, sockets/cores-per-socket/threads-per-core from `lscpu`,
+# and RealMemory in MB from `free -m` (leave a little headroom below the physical total).
+NodeName=<hostname> CPUs=<nproc> Sockets=1 CoresPerSocket=<cores> ThreadsPerCore=<threads> RealMemory=<MB> State=UNKNOWN
+PartitionName=LocalQ Nodes=<hostname> Default=YES MaxTime=INFINITE State=UP
+```
+
+```shell
+sudo mkdir -p /var/lib/slurm-llnl/slurmctld /var/lib/slurm-llnl/slurmd /var/log/slurm-llnl /var/run/slurm
+sudo chown slurm:slurm /var/lib/slurm-llnl/slurmctld /var/lib/slurm-llnl/slurmd /var/log/slurm-llnl /var/run/slurm
+```
+
+### 8f. Start everything and register the cluster
+
+```shell
+sudo systemctl enable --now slurmdbd
+sudo systemctl enable --now slurmctld
+sudo systemctl enable --now slurmd
+
+# slurmdbd only accepts accounting data for clusters it knows about
+sacctmgr -i add cluster localcluster
+sudo systemctl restart slurmctld
+```
+
+### 8g. Verify
+
+```shell
+sinfo            # expect: PARTITION LocalQ, STATE idle, your hostname listed
+srun hostname    # runs `hostname` as a Slurm job on the local node
+sacctmgr show cluster
+```
+
+The `partitions` block (`name: LocalQ`, `num_cores_per_node`, `max_nodes`, `memory_per_node`) that a
+cluster-agent config (`cluster_config.scheduler_type: slurm`) points at should match the
+`PartitionName=LocalQ` line above — adjust either side to keep them consistent.
+
+## 9. Cleanup
 
 ```shell
 kind delete cluster --name platform-mesh
+
+# StrömungsRaum stack
+cd ~/repo/ianus-simod && task dev:down
+
+# Slurm (only if you want to tear the scheduler down too)
+sudo systemctl disable --now slurmd slurmctld slurmdbd munge
 ```
