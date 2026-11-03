@@ -211,6 +211,15 @@ KUBECONFIG=./operator.kubeconfig go run ./cmd/ianus --endpointslice=ianus.platfo
 KUBECONFIG=./injectionmolding.kubeconfig go run ./cmd/injectionmolding --endpointslice=injectionmolding.platform-mesh.io --simod-base-url=https://backend.dev.simod.de
 ```
 
+Set connection details to simod backend by creating a **simod-credentials** secret CRD.
+
+```shell
+export KUBECONFIG=$PM_PLATFORM
+kubectl --server https://kcp.api.portal.localhost:8443/clusters/root:orgs:<org-name>:<org-user> create secret generic simod-credentials  -from-literal=email='<simod-email>' --from-literal=password='<simod-password>' -n default --insecure-skip-tls-verify
+```
+
+where <org-name>, <org-user>, <simod-email> and <simod-password> need to be replaced with adequate values. 
+
 Credentials go in a same-namespace `Secret` with `email`/`password` keys, referenced by each CR's
 `spec.secretRefs[0]` — create a user via step 7d first.
 
