@@ -308,10 +308,10 @@ lives alongside `ianus` and `ianus-injection-molding` in this same repo - own wo
 same multi-provider provisioning story the SKZ dummy provider's `ProviderMetadata` describes, carried
 through for real: a customer characterizes a material in the SKZ Materials provider (`apis/skz/v1alpha1`'s
 `Material` CRD, shaped 1:1 like `docs/assets/EastmanPlastics1000.json`), then provisions this provider
-to submit that characterization to the real StromungsRaum/SIMOD backend.
+to submit that characterization to the real StrömungsRaum/SIMOD backend.
 
 - `MaterialCatalog` is a **singleton per account** (the portal creates the first one it doesn't find,
-  named `catalog`) - it only browses StromungsRaum's existing materials into `status.availableMaterials`,
+  named `catalog`) - it only browses StrömungsRaum's existing materials into `status.availableMaterials`,
   refreshed via `spec.refreshRequestedAt` the same way `InjectionMoldingService.status.availableSimulations`
   works.
 - `MaterialSubmission` is **HttpBin-style**, one per portal "+" click, create-once like the other SIMOD

@@ -47,7 +47,7 @@ spec:
           spec:
             description: |-
               MaterialSubmissionSpec defines the desired state of MaterialSubmission.
-              Each MaterialSubmission submits at most one material to StromungsRaum -
+              Each MaterialSubmission submits at most one material to StrömungsRaum -
               like InjectionMoldingService, the portal creates one of these per card via
               its "+" button, not one shared resource per account.
             properties:
@@ -55,7 +55,7 @@ spec:
                 description: |-
                   Material is the full material characterization to submit, copied by
                   the portal from the chosen SKZ Material at creation time. The
-                  StromungsRaum backend's materials endpoint has no update route, so the
+                  StrömungsRaum backend's materials endpoint has no update route, so the
                   reconciler only ever creates once (see status.materialId).
                 properties:
                   abs_max_melt_temp:
@@ -321,8 +321,14 @@ spec:
             properties:
               materialId:
                 description: |-
-                  MaterialID is the StromungsRaum backend uuid assigned to this material
+                  MaterialID is the StrömungsRaum backend uuid assigned to this material
                   once submitted.
+                type: string
+              materialUrl:
+                description: |-
+                  MaterialURL is the public SIMOD web UI link to the newly created
+                  material (https://<env>.simod.de/material/<uuid>), set alongside
+                  MaterialID once submitted.
                 type: string
               message:
                 description: Message carries error details when Phase is Failed.

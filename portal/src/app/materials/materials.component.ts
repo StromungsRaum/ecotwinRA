@@ -2,7 +2,7 @@
  * IANUS Simulation - Materials Page Component
  *
  * Two sections on one page:
- *  - StromungsRaum materials: the singleton MaterialCatalog's browse view
+ *  - StrömungsRaum materials: the singleton MaterialCatalog's browse view
  *    (Refresh -> status.availableMaterials). No "+" - there's only one.
  *  - Submissions: HttpBin-style grid of MaterialSubmission cards. "+" opens
  *    a dialog listing the account's SKZ Materials (a different provider's
@@ -29,6 +29,7 @@ import '@ui5/webcomponents-icons/dist/add.js';
 import '@ui5/webcomponents-icons/dist/decline.js';
 import '@ui5/webcomponents-icons/dist/refresh.js';
 import '@ui5/webcomponents-icons/dist/accept.js';
+import '@ui5/webcomponents-icons/dist/action.js';
 import '@ui5/webcomponents-icons/dist/navigation-left-arrow.js';
 import '@ui5/webcomponents-icons/dist/navigation-right-arrow.js';
 
@@ -131,7 +132,7 @@ export class MaterialsComponent {
     });
   }
 
-  /** Requests a StromungsRaum refresh and polls until the operator has processed it. */
+  /** Requests a StrömungsRaum refresh and polls until the operator has processed it. */
   public refreshCatalog(): void {
     const catalog = this.catalog();
     if (!catalog || this.refreshing()) {
@@ -206,6 +207,13 @@ export class MaterialsComponent {
 
   public formatTimestamp(ts?: string): string {
     return ts ? new Date(ts).toLocaleString() : 'never';
+  }
+
+  public openMaterialLink(submission: MaterialSubmission): void {
+    const url = submission.status?.materialUrl;
+    if (url) {
+      window.open(url, '_blank', 'noopener');
+    }
   }
 
   public openAddDialog(): void {
@@ -318,7 +326,7 @@ export class MaterialsComponent {
 
   /**
    * Polls the new MaterialSubmission's own status until the operator has
-   * actually submitted it to StromungsRaum (status.phase 'Ready'), then
+   * actually submitted it to StrömungsRaum (status.phase 'Ready'), then
    * refreshes the catalog so the new material shows up without a manual
    * click. Submitting to the CRD Gateway only confirms the CR was created,
    * not that the backend call behind it has happened yet.

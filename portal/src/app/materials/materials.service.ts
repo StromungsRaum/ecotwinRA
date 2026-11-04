@@ -5,7 +5,7 @@
  * provider page in this portal:
  *  - MaterialCatalog: a singleton per account (this client creates the first
  *    one it doesn't find, named "catalog"), purely for browsing
- *    StromungsRaum's existing materials via Refresh -> status.availableMaterials.
+ *    StrömungsRaum's existing materials via Refresh -> status.availableMaterials.
  * NOTE: nested CREATE_SUBMISSION_MUTATION input types are named after their
  * full field PATH from the Kind (e.g.
  * `MaterialsPlatformMeshIoV1alpha1MaterialSubmissionSpecMaterialData_Input`
@@ -95,6 +95,7 @@ export interface MaterialSubmission {
   status?: {
     phase?: string;
     materialId?: string;
+    materialUrl?: string;
     submittedAt?: string;
     message?: string;
   };
@@ -204,7 +205,7 @@ const LIST_SUBMISSIONS_QUERY = `
                 max_melt_temp
               }
             }
-            status { phase materialId submittedAt message }
+            status { phase materialId materialUrl submittedAt message }
           }
         }
       }

@@ -36,11 +36,11 @@
             @if (svc.status?.phase === 'Failed') {
               <ui5-text class="error-text">{{ svc.status?.message }}</ui5-text>
             } @else {
-              <ui5-button design="Transparent" icon="action" (click)="openSimodLink(svc)">
-                Create simulation on SIMOD
-              </ui5-button>
-
               @if (!svc.spec?.simulationId) {
+                <ui5-button design="Transparent" icon="action" (click)="openSimodLink(svc)">
+                  Create simulation on SIMOD
+                </ui5-button>
+
                 <div class="im-field">
                   <div class="im-field-row">
                     <ui5-label>Select a simulation</ui5-label>

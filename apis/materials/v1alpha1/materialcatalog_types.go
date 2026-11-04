@@ -20,23 +20,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// MaterialSummary is a condensed view of a StromungsRaum Material, enough to
+// MaterialSummary is a condensed view of a StrömungsRaum Material, enough to
 // populate the portal's catalog browse view.
 type MaterialSummary struct {
-	// ID is the uuid the StromungsRaum backend assigned to this material.
+	// ID is the uuid the StrömungsRaum backend assigned to this material.
 	ID string `json:"id"`
 
-	// Name is the material's name on the StromungsRaum backend.
+	// Name is the material's name on the StrömungsRaum backend.
 	Name string `json:"name"`
 
-	// CreatedAt is when the material was created on the StromungsRaum backend.
+	// CreatedAt is when the material was created on the StrömungsRaum backend.
 	CreatedAt string `json:"createdAt"`
 }
 
 // MaterialCatalogSpec defines the desired state of MaterialCatalog.
 //
 // Unlike MaterialSubmission, this is a singleton per account - it exists
-// purely to browse StromungsRaum's existing materials into status, not to
+// purely to browse StrömungsRaum's existing materials into status, not to
 // create new ones.
 type MaterialCatalogSpec struct {
 	// SecretRefs is an array of references to Secrets containing SIMOD credentials
@@ -44,7 +44,7 @@ type MaterialCatalogSpec struct {
 	SecretRefs []SecretReference `json:"secretRefs,omitempty"`
 
 	// RefreshRequestedAt is bumped by the UI's Refresh button to request the
-	// reconciler re-fetch the account's Materials from the StromungsRaum
+	// reconciler re-fetch the account's Materials from the StrömungsRaum
 	// backend, populating status.availableMaterials. Any change to this
 	// value triggers a refresh; the value itself is otherwise opaque.
 	// +optional
@@ -57,13 +57,13 @@ type MaterialCatalogStatus struct {
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
-	// AvailableMaterials lists the StromungsRaum backend's existing
+	// AvailableMaterials lists the StrömungsRaum backend's existing
 	// Materials for this account, as of the last refresh.
 	// +optional
 	AvailableMaterials []MaterialSummary `json:"availableMaterials,omitempty"`
 
 	// LastRefreshedAt is the RFC3339 timestamp of the last successful
-	// available-materials fetch from the StromungsRaum backend.
+	// available-materials fetch from the StrömungsRaum backend.
 	// +optional
 	LastRefreshedAt string `json:"lastRefreshedAt,omitempty"`
 

@@ -142,7 +142,7 @@ type SourceMaterialRef struct {
 }
 
 // MaterialSubmissionSpec defines the desired state of MaterialSubmission.
-// Each MaterialSubmission submits at most one material to StromungsRaum -
+// Each MaterialSubmission submits at most one material to StrömungsRaum -
 // like InjectionMoldingService, the portal creates one of these per card via
 // its "+" button, not one shared resource per account.
 type MaterialSubmissionSpec struct {
@@ -157,7 +157,7 @@ type MaterialSubmissionSpec struct {
 
 	// Material is the full material characterization to submit, copied by
 	// the portal from the chosen SKZ Material at creation time. The
-	// StromungsRaum backend's materials endpoint has no update route, so the
+	// StrömungsRaum backend's materials endpoint has no update route, so the
 	// reconciler only ever creates once (see status.materialId).
 	// +optional
 	Material *MaterialSubmissionData `json:"material,omitempty"`
@@ -169,10 +169,16 @@ type MaterialSubmissionStatus struct {
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
-	// MaterialID is the StromungsRaum backend uuid assigned to this material
+	// MaterialID is the StrömungsRaum backend uuid assigned to this material
 	// once submitted.
 	// +optional
 	MaterialID string `json:"materialId,omitempty"`
+
+	// MaterialURL is the public SIMOD web UI link to the newly created
+	// material (https://<env>.simod.de/material/<uuid>), set alongside
+	// MaterialID once submitted.
+	// +optional
+	MaterialURL string `json:"materialUrl,omitempty"`
 
 	// SubmittedAt is the RFC3339 timestamp this material was submitted at.
 	// +optional

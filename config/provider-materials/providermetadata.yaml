@@ -6,8 +6,8 @@ spec:
   displayName: IANUS Simulation - Materials
   description: |
     Provider for Platform Mesh.
-    Lists StromungsRaum's existing materials and lets you submit a new material -
-    characterized by the SKZ Materials provider's CRDs - to StromungsRaum.
+    Lists StrömungsRaum's existing materials and lets you submit a new material -
+    characterized by the SKZ Materials provider's CRDs - to StrömungsRaum.
   contacts:
     - displayName: IANUS Simulation Team
       email: ecotwin@ianus-simulation.de

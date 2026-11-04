@@ -33,7 +33,7 @@ import (
 	materialsv1alpha1 "github.com/StromungsRaum/ecotwinRA/apis/materials/v1alpha1"
 )
 
-// MaterialCatalogReconciler browses StromungsRaum's existing materials into
+// MaterialCatalogReconciler browses StrömungsRaum's existing materials into
 // status, HttpBin-style but singleton (the portal offers no "+" for this
 // one - there is exactly one MaterialCatalog per account):
 //   - spec.refreshRequestedAt, bumped by the UI's Refresh button, triggers a

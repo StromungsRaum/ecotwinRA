@@ -14,12 +14,12 @@ spec:
   resources:
   - group: materials.platform-mesh.io
     name: materialcatalogs
-    schema: v261103-644c8ff.materialcatalogs.materials.platform-mesh.io
+    schema: v261104-c1fdfbd.materialcatalogs.materials.platform-mesh.io
     storage:
       crd: {}
   - group: materials.platform-mesh.io
     name: materialsubmissions
-    schema: v261103-644c8ff.materialsubmissions.materials.platform-mesh.io
+    schema: v261104-c1fdfbd.materialsubmissions.materials.platform-mesh.io
     storage:
       crd: {}
 status: {}

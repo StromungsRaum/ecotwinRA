@@ -72,6 +72,18 @@
       ></ui5-input>
     </div>
     <div class="form-field">
+      <ui5-button design="Transparent" icon="upload" (click)="jsonFileInput.click()">
+        Upload JSON file
+      </ui5-button>
+      <input
+        #jsonFileInput
+        type="file"
+        accept=".json,application/json"
+        hidden
+        (change)="onJsonFileSelected($event)"
+      />
+    </div>
+    <div class="form-field">
       <ui5-label for="material-json" required>Material JSON</ui5-label>
       <ui5-textarea
         id="material-json"

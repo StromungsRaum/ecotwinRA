@@ -34,7 +34,7 @@ import (
 	"github.com/StromungsRaum/ecotwinRA/pkg/simod"
 )
 
-// MaterialSubmissionReconciler submits one material to StromungsRaum per
+// MaterialSubmissionReconciler submits one material to StrömungsRaum per
 // resource, create-once (the backend's materials endpoint has no
 // update/delete route, same as Component/DigitalTwin/Simulation - see
 // CLAUDE.md's "SIMOD CRDs" section): the portal creates one of these per
@@ -102,8 +102,17 @@ func (r *MaterialSubmissionReconciler) Reconcile(ctx context.Context, req mcreco
 		return reconcile.Result{}, err
 	}
 
+	materialURL, err := materialURL(resp.ID)
+	if err != nil {
+		sub.Status.Phase = phaseFailed
+		sub.Status.Message = err.Error()
+		_ = client.Status().Update(ctx, sub)
+		return reconcile.Result{}, err
+	}
+
 	sub.Status.Phase = phaseReady
 	sub.Status.MaterialID = resp.ID
+	sub.Status.MaterialURL = materialURL
 	sub.Status.SubmittedAt = time.Now().UTC().Format(time.RFC3339)
 	sub.Status.Message = ""
 	log.Info("Submitted material", "materialId", resp.ID)
@@ -117,7 +126,7 @@ func (r *MaterialSubmissionReconciler) Reconcile(ctx context.Context, req mcreco
 
 // buildMaterialRequest translates a MaterialSubmissionData (the portal's
 // copy of an SKZ Material's spec, field-for-field typed) into the
-// StromungsRaum Platform API's sections.{temperature,viscosity,heat,
+// StrömungsRaum Platform API's sections.{temperature,viscosity,heat,
 // injection_molding,pvt} shape, each a {method, parameters} pair - the SKZ
 // CRD groups data by model (e.g. tempModel.c1), the backend groups it by
 // generic method/parameters, so this mapping is the one place that

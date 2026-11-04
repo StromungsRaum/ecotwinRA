@@ -19,6 +19,8 @@ package materials
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -50,4 +52,21 @@ func loginSIMOD(ctx context.Context, cl client.Client, namespace string, secretR
 		return nil, "", fmt.Errorf("no secretRefs configured")
 	}
 	return simod.LoginFromSecret(ctx, cl, namespace, secretRefs[0].Name, simodBaseURL)
+}
+
+// materialURL derives the public SIMOD web UI link for a single material from
+// the configured SIMOD backend base URL, e.g.
+// https://backend.dev.simod.de -> https://dev.simod.de/material/<uuid> (same
+// "strip backend. prefix" pattern as operator/injectionmolding's
+// simulationURL). id is the Platform API's Material.ID, already the
+// backend's material uuid (ianus-simod's MaterialResource serializes the
+// uuid column as "id" - see pkg/simod/client.go's MaterialResponse).
+func materialURL(id string) (string, error) {
+	u, err := url.Parse(simodBaseURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid simod base url %q: %w", simodBaseURL, err)
+	}
+	u.Host = strings.TrimPrefix(u.Host, "backend.")
+	u.Path = "/material/" + id
+	return u.String(), nil
 }

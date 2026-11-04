@@ -1,16 +1,16 @@
 <!--
-  IANUS Simulation - Materials UI: a StromungsRaum catalog browse section
+  IANUS Simulation - Materials UI: a StrömungsRaum catalog browse section
   (singleton, Refresh-only) above an HttpBin-style grid of submissions.
 -->
 <ui5-dynamic-page>
   <ui5-dynamic-page-title slot="titleArea">
     <ui5-title slot="heading" level="H3">IANUS Simulation - Materials</ui5-title>
-    <ui5-label slot="subheading">Browse StromungsRaum's materials, submit new ones from SKZ</ui5-label>
+    <ui5-label slot="subheading">Browse StrömungsRaum's materials, submit new ones from SKZ</ui5-label>
   </ui5-dynamic-page-title>
 
   <div class="materials-section">
     <div class="section-header">
-      <ui5-title level="H4">StromungsRaum materials</ui5-title>
+      <ui5-title level="H4">StrömungsRaum materials</ui5-title>
       <ui5-button design="Transparent" icon="refresh" [disabled]="refreshing()" (click)="refreshCatalog()">Refresh</ui5-button>
     </div>
     <ui5-label class="timestamp-label">Last refreshed: {{ formatTimestamp(catalog()?.status?.lastRefreshedAt) }}</ui5-label>
@@ -82,8 +82,11 @@
             } @else if (sub.status?.phase === 'Ready') {
               <div class="submission-field">
                 <ui5-icon name="accept" class="complete-icon"></ui5-icon>
-                <ui5-text>StromungsRaum id: {{ sub.status?.materialId }}</ui5-text>
+                <ui5-text>StrömungsRaum id: {{ sub.status?.materialId }}</ui5-text>
               </div>
+              <ui5-button design="Emphasized" icon="action" (click)="openMaterialLink(sub)">
+                View material
+              </ui5-button>
               <ui5-label class="timestamp-label">Submitted: {{ formatTimestamp(sub.status?.submittedAt) }}</ui5-label>
             } @else {
               <ui5-text>Submitting...</ui5-text>
@@ -127,7 +130,7 @@
   (close)="cancelRename()"
 >
   <div class="dialog-content">
-    <ui5-text>StromungsRaum already has a material with this name. Choose a new one.</ui5-text>
+    <ui5-text>StrömungsRaum already has a material with this name. Choose a new one.</ui5-text>
     <div class="form-field">
       <ui5-label for="rename-input" required>Name</ui5-label>
       <ui5-input

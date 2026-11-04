@@ -27,6 +27,7 @@ import {
 
 import '@ui5/webcomponents-icons/dist/add.js';
 import '@ui5/webcomponents-icons/dist/decline.js';
+import '@ui5/webcomponents-icons/dist/upload.js';
 
 import { Material, MaterialSpec, SkzService } from './skz.service';
 
@@ -126,18 +127,41 @@ export class SkzComponent {
 
   public onJsonInput(event: Event): void {
     const textarea = event.target as HTMLTextAreaElement;
-    this.materialJson.set(textarea.value);
+    this.setMaterialJson(textarea.value);
+  }
+
+  /** Reads a locally-picked JSON file into the textarea, same as pasting it. */
+  public onJsonFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = ''; // allow re-picking the same file later
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.setMaterialJson(typeof reader.result === 'string' ? reader.result : '');
+    };
+    reader.onerror = () => {
+      this.jsonError.set('Failed to read file.');
+    };
+    reader.readAsText(file);
+  }
+
+  private setMaterialJson(value: string): void {
+    this.materialJson.set(value);
     this.jsonError.set('');
 
     // Prefill Name from the JSON's own "name" field, unless the user already typed one.
     if (!this.materialName().trim()) {
       try {
-        const parsed = JSON.parse(textarea.value) as Record<string, unknown>;
+        const parsed = JSON.parse(value) as Record<string, unknown>;
         if (typeof parsed?.['name'] === 'string') {
           this.materialName.set(parsed['name']);
         }
       } catch {
-        // still typing - ignore
+        // still typing / not valid JSON yet - ignore
       }
     }
   }
