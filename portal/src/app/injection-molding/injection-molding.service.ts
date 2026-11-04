@@ -54,6 +54,7 @@ export interface InjectionMoldingService {
     url?: string;
     availableSimulations?: SimulationSummary[];
     lastRefreshedAt?: string;
+    lastProcessedRefreshRequestedAt?: string;
     monitoredSimulation?: MonitoredSimulationStatus;
     message?: string;
   };
@@ -82,6 +83,7 @@ const LIST_QUERY = `
               url
               availableSimulations { id name status }
               lastRefreshedAt
+              lastProcessedRefreshRequestedAt
               monitoredSimulation { id name status complete resultsUrl lastPolledAt }
               message
             }
@@ -181,11 +183,11 @@ export class InjectionMoldingServiceClient {
   }
 
   /** Bumps spec.refreshRequestedAt to re-fetch status.availableSimulations. */
-  requestRefresh(name: string, namespace: string): Observable<boolean> {
+  requestRefresh(name: string, namespace: string, refreshRequestedAt: string): Observable<boolean> {
     return this.post(UPDATE_REFRESH_MUTATION, {
       name,
       namespace,
-      refreshRequestedAt: new Date().toISOString(),
+      refreshRequestedAt,
     }).pipe(
       map((response: any) => !!response.data?.injectionmolding_platform_mesh_io?.v1alpha1?.updateInjectionMoldingService),
       catchError((error) => {

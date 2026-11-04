@@ -58,6 +58,7 @@ httpRoute:
   pathPrefixes:
     - /injection-molding
     - /skz
+    - /materials
   filters:
     - extensionRef:
         group: traefik.io

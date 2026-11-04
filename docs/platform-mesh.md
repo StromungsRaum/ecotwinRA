@@ -58,15 +58,36 @@ This repo's `config/provider/contentconfiguration.yaml` + `providermetadata.yaml
 
 ## Project Structure
 
+This repo now hosts four providers (`ianus`, `ianus-injection-molding`, `skz`, `ianus-materials`), each
+following the same file layout keyed by a `<name>` (`injectionmolding`, `skz`, `materials`) — shown below
+for `ianus` (no suffix) with the repeated `-<name>` pattern underneath. See
+[creating-a-provider.md](./creating-a-provider.md) for the full file-by-file walkthrough of that pattern.
+
 ```
+├── apis/
+│   ├── ianus/v1alpha1/              # Component, DigitalTwin, ExecutionParameter, Simulation CRDs
+│   ├── injectionmolding/v1alpha1/   # InjectionMoldingService CRD
+│   ├── skz/v1alpha1/                # Material CRD (dummy/demo provider)
+│   └── materials/v1alpha1/          # MaterialCatalog, MaterialSubmission CRDs
 ├── cmd/
-│   ├── init/              # Bootstrap CLI tool
-│   └── ianus/             # Provider operator
+│   ├── init/, ianus/                 # Bootstrap CLI + operator (ianus)
+│   ├── injectionmolding-init/, injectionmolding/
+│   ├── skz-init/                     # skz has no operator - bootstrap only
+│   └── materials-init/, materials/
 ├── config/
-│   ├── kcp/               # kcp resources (APIExport, APIResourceSchema)
-│   └── provider/          # Provider resources (ProviderMetadata, ContentConfiguration, RBAC)
-├── pkg/bootstrap/         # Bootstrap logic for applying resources
-└── portal/                # Custom UI micro frontend example (Angular + Luigi)
+│   ├── kcp[-<name>]/                 # kcp resources (APIExport, APIResourceSchema)
+│   ├── provider[-<name>]/            # Provider resources (ProviderMetadata, ContentConfiguration, RBAC)
+│   └── controller[-<name>]/          # Controller identity/RBAC (not present for skz)
+├── operator/
+│   ├── ianus/, injectionmolding/, materials/   # Reconcilers (none for skz)
+├── pkg/
+│   ├── bootstrap/                    # Bootstrap logic for applying resources (one func per provider)
+│   └── simod/                        # Shared SIMOD Platform API HTTP client
+├── deploy/helm/
+│   ├── ianus-controller/, ianus-portal/
+│   ├── injectionmolding-controller/
+│   └── materials-controller/         # skz has no chart - no operator to deploy
+└── portal/                           # Luigi microfrontend (Angular) - injection-molding, skz, materials pages
 ```
 
 ## Usage
@@ -279,6 +300,73 @@ deployment with proper DNS and a CA-signed backend cert needs none of it.
    ]'
    ```
 
+## IANUS Simulation - Materials Provider
+
+A third, independent provider ("IANUS Simulation - Materials", APIExport `materials.platform-mesh.io`)
+lives alongside `ianus` and `ianus-injection-molding` in this same repo - own workspace, own two CRDs
+(`MaterialCatalog`, `MaterialSubmission`), own operator binary/image/Helm chart. It demonstrates the
+same multi-provider provisioning story the SKZ dummy provider's `ProviderMetadata` describes, carried
+through for real: a customer characterizes a material in the SKZ Materials provider (`apis/skz/v1alpha1`'s
+`Material` CRD, shaped 1:1 like `docs/assets/EastmanPlastics1000.json`), then provisions this provider
+to submit that characterization to the real StromungsRaum/SIMOD backend.
+
+- `MaterialCatalog` is a **singleton per account** (the portal creates the first one it doesn't find,
+  named `catalog`) - it only browses StromungsRaum's existing materials into `status.availableMaterials`,
+  refreshed via `spec.refreshRequestedAt` the same way `InjectionMoldingService.status.availableSimulations`
+  works.
+- `MaterialSubmission` is **HttpBin-style**, one per portal "+" click, create-once like the other SIMOD
+  CRDs (`/api/platform/materials` has no update/delete route either). Its `spec.material` is a full
+  copy of a chosen SKZ `Material`'s spec, embedded verbatim by the portal at creation time - the
+  materials-controller never reads the SKZ CRD itself. Cross-provider composition happens in the portal
+  (a single GraphQL client can query any APIExport the consumer workspace is bound to), not via a
+  cross-APIExport kcp permission claim; see `apis/materials/v1alpha1/materialsubmission_types.go`'s
+  package doc for why. The reconciler's `operator/materials/materialsubmission_controller.go` translates
+  the CRD's physical-model fields (e.g. `tempModel.c1`) into the backend's generic
+  `sections.{temperature,viscosity,heat,injection_molding,pvt}` `{method, parameters}` shape -
+  `pkg/simod/client.go`'s `CreateMaterial`/`ListMaterials`.
+
+See `apis/materials/v1alpha1/`, `apis/skz/v1alpha1/material_types.go`, `operator/materials/`,
+`pkg/simod/client.go`'s `Material*` types, and `portal/src/app/materials/`.
+
+Steps mirror the `ianus`/`ianus-injection-molding` walkthroughs above, with its own workspace and binaries:
+
+```bash
+# 1. Create the provider workspace (sibling of `ianus` and `ianus-injection-molding`)
+KUBECONFIG=$PM_KUBECONFIG kubectl ws use :
+KUBECONFIG=$PM_KUBECONFIG kubectl ws create providers --type=root:providers --enter --ignore-existing
+KUBECONFIG=$PM_KUBECONFIG kubectl ws create ianus-materials --type=root:provider --enter --ignore-existing
+
+# 2. Bootstrap (own binary, own workspace)
+KUBECONFIG=$PM_KUBECONFIG make init-materials HOST_OVERRIDE=https://frontproxy-front-proxy.platform-mesh-system:8443
+
+# 3. Extract the operator kubeconfig
+KUBECONFIG=$PM_KUBECONFIG kubectl get secret materials-controller-kubeconfig -n default -o jsonpath='{.data.kubeconfig}' | base64 -d > materials.kubeconfig
+
+# 4. Run locally (optional)
+KUBECONFIG=./materials.kubeconfig go run ./cmd/materials --endpointslice=materials.platform-mesh.io --simod-base-url=https://backend.dev.simod.de
+
+# 5. Build and load the image
+export IMAGE_TAG=platform-mesh
+make image-build-materials kind-load-materials IMAGE_TAG=$IMAGE_TAG
+
+# 6. Deploy
+KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create namespace provider-materials
+KUBECONFIG=$COMPUTE_KUBECONFIG kubectl delete secret materials-controller-kubeconfig -n provider-materials --ignore-not-found
+KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create secret generic materials-controller-kubeconfig \
+  --from-file=kubeconfig=./materials.kubeconfig -n provider-materials
+
+KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade --install materials-controller ./deploy/helm/materials-controller \
+  --namespace provider-materials \
+  --set image.tag=$IMAGE_TAG \
+  --set image.pullPolicy=IfNotPresent
+```
+
+Like injection molding, `--simod-base-url` (default `https://backend.dev.simod.de`, chart value
+`controller.simodBaseURL`) drives the materials API calls - bump it the same way as dev moves to int to
+prod. The CR's `spec.secretRefs` -> Secret (`email`/`password`) pattern, and the
+"Local-sandbox-only gotchas" DNS/TLS workarounds above, apply here identically if pointing at a local
+self-signed SIMOD backend instance.
+
 ## Debugging
 
 Assuming your provider workspace is `ianus` under the `providers` tree:
@@ -339,6 +427,12 @@ Go types (apis/) → controller-gen → CRDs (config/crds/) → apigen → APIRe
 
 ## Make Targets
 
+The targets below are the `ianus` provider's (no suffix). `injectionmolding`, `skz`, and `materials` each
+have the same targets suffixed `-injectionmolding`/`-skz`/`-materials` (e.g. `build-materials`,
+`init-materials`, `generate-materials` — `skz` only has `build-init-skz`/`init-skz`/`generate-skz`, no
+operator). **Run `make help` for the full, current list** — this table only covers the shared shape, not
+every target; it drifts from `Makefile` otherwise.
+
 | Target | Description |
 |--------|-------------|
 | `make build` | Build all binaries (operator + init) |
@@ -351,10 +445,10 @@ Go types (apis/) → controller-gen → CRDs (config/crds/) → apigen → APIRe
 | `make apiresourceschemas` | Generate APIResourceSchemas from CRDs |
 | `make image-build` | Build controller container image |
 | `make portal-image-build` | Build portal container image |
-| `make images` | Build all container images |
+| `make images` | Build all container images (all providers + portal) |
 | `make kind-load` | Load controller image into kind cluster |
 | `make kind-load-portal` | Load portal image into kind cluster |
-| `make kind-load-all` | Load all images into kind cluster |
+| `make kind-load-all` | Load all images into kind cluster (all providers + portal) |
 | `make tools` | Install all required tools (controller-gen, apigen) |
 | `make fmt` | Run go fmt |
 | `make vet` | Run go vet |

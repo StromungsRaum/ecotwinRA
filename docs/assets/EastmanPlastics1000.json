@@ -1,0 +1,76 @@
+{
+    "name": "Eastman Plastics Foo 1000",
+    "data": {
+        "type": "COPOLYESTER",
+        "norm": "-",
+        "material_number": "-",
+        "density": 1105.0,
+        "heatconductivity": 0.222,
+        "heatcapacity": 1.921
+    },
+    "viscoModel": {
+        "exponent": 0.191,
+        "zero_viscosity": 58732490000.0,
+        "critical_stress_level": 793679.0,
+        "model": "cross"
+    },
+    "heatModel": {
+        "thermaldata": [
+            {
+                "temperature": 262,
+                "heatcapacity": 1.921,
+                "heatconductivity": 0.222,
+                "density": 1105.0
+            }
+        ],
+        "model": "Tabulated"
+    },
+    "tempModel": {
+        "c1": 24.7,
+        "c2": 51.6,
+        "D3": 0,
+        "referenceTemperature": 100.01,
+        "model": "c1c2"
+    },
+    "pvtmodel": {
+        "model": "tait",
+        "b1s": 0.0008,
+        "b2s": 2.7e-7,
+        "b3s": 271814996.0,
+        "b4s": 0.00428,
+        "b1m": 0.000799,
+        "b2m": 6.07e-7,
+        "b3m": 203371364.0,
+        "b4m": 0.00476,
+        "b5": 363.85,
+        "b6": 2.3940e-7,
+        "b7": 0,
+        "b8": 0,
+        "b9": 0
+    },
+    "structure": "amorphous",
+    "min_melt_temp": 250,
+    "max_melt_temp": 300,
+    "abs_max_melt_temp": 310.002,
+    "eject_temp": 83.0,
+    "freeze_temp": 90.0,
+    "melt_density": 1105.0,
+    "solid_density": 1280.0,
+    "mech_properties": {
+        "E1": 2205015000.0,
+        "E2": 2187011363.0,
+        "E_avg": 2195985500.0,
+        "v12": 0.413,
+        "v23": 0.395,
+        "alpha_1": 7.450e-5,
+        "alpha_2": 7.350e-5,
+        "G12": 769996500.0
+    },
+    "shrinkage_properties": {
+        "parallel": 0.485,
+        "perpendicular": 0.490,
+        "avg_nominal": 0.49
+    },
+    "max_shear_stress": 0.41,
+    "max_shear_rate": 40000.0
+}

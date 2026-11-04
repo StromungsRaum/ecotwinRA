@@ -1,0 +1,144 @@
+<!--
+  IANUS Simulation - Materials UI: a StromungsRaum catalog browse section
+  (singleton, Refresh-only) above an HttpBin-style grid of submissions.
+-->
+<ui5-dynamic-page>
+  <ui5-dynamic-page-title slot="titleArea">
+    <ui5-title slot="heading" level="H3">IANUS Simulation - Materials</ui5-title>
+    <ui5-label slot="subheading">Browse StromungsRaum's materials, submit new ones from SKZ</ui5-label>
+  </ui5-dynamic-page-title>
+
+  <div class="materials-section">
+    <div class="section-header">
+      <ui5-title level="H4">StromungsRaum materials</ui5-title>
+      <ui5-button design="Transparent" icon="refresh" [disabled]="refreshing()" (click)="refreshCatalog()">Refresh</ui5-button>
+    </div>
+    <ui5-label class="timestamp-label">Last refreshed: {{ formatTimestamp(catalog()?.status?.lastRefreshedAt) }}</ui5-label>
+    @if (refreshing()) {
+      <ui5-label class="timestamp-label">Refreshing...</ui5-label>
+    }
+
+    @if (catalog()?.status?.phase === 'Failed') {
+      <ui5-text class="error-text">{{ catalog()?.status?.message }}</ui5-text>
+    } @else if (!catalog()?.status?.availableMaterials?.length) {
+      <ui5-text>No materials fetched yet - click Refresh.</ui5-text>
+    } @else {
+      <div class="catalog-grid">
+        @for (m of pagedCatalogMaterials(); track m.id) {
+          <div class="catalog-row">
+            <ui5-text>{{ m.name }}</ui5-text>
+            <ui5-label class="timestamp-label">{{ m.createdAt }}</ui5-label>
+          </div>
+        }
+      </div>
+
+      @if (catalogPageCount() > 1) {
+        <div class="pagination-bar">
+          <ui5-button
+            icon="navigation-left-arrow"
+            design="Transparent"
+            [disabled]="catalogPage() === 0"
+            (click)="prevCatalogPage()"
+          ></ui5-button>
+          <ui5-label>Page {{ catalogPage() + 1 }} of {{ catalogPageCount() }}</ui5-label>
+          <ui5-button
+            icon="navigation-right-arrow"
+            design="Transparent"
+            [disabled]="catalogPage() >= catalogPageCount() - 1"
+            (click)="nextCatalogPage()"
+          ></ui5-button>
+        </div>
+      }
+    }
+  </div>
+
+  <div class="materials-section">
+    <div class="section-header">
+      <ui5-title level="H4">Submissions</ui5-title>
+      <ui5-button text="Add" design="Emphasized" icon="add" (click)="openAddDialog()"></ui5-button>
+    </div>
+
+    @if (loading()) {
+      <div class="loading-state">
+        <ui5-text>Loading submissions...</ui5-text>
+      </div>
+    } @else if (submissions().length === 0) {
+      <div class="empty-state">
+        <ui5-title level="H5">No submissions yet</ui5-title>
+        <ui5-text>Click "Add" to submit a material characterized in SKZ.</ui5-text>
+      </div>
+    } @else {
+      <div class="submissions-grid">
+        @for (sub of submissions(); track sub.metadata.name) {
+          <div class="submission-card">
+            <div class="submission-card-header">
+              <ui5-title level="H5">{{ sub.spec?.material?.name }}</ui5-title>
+              <ui5-button icon="decline" design="Transparent" tooltip="Delete" (click)="deleteSubmission(sub)"></ui5-button>
+            </div>
+            <ui5-label>Source: {{ sub.spec?.sourceMaterialRef?.name }} (SKZ)</ui5-label>
+
+            @if (sub.status?.phase === 'Failed') {
+              <ui5-text class="error-text">{{ sub.status?.message }}</ui5-text>
+            } @else if (sub.status?.phase === 'Ready') {
+              <div class="submission-field">
+                <ui5-icon name="accept" class="complete-icon"></ui5-icon>
+                <ui5-text>StromungsRaum id: {{ sub.status?.materialId }}</ui5-text>
+              </div>
+              <ui5-label class="timestamp-label">Submitted: {{ formatTimestamp(sub.status?.submittedAt) }}</ui5-label>
+            } @else {
+              <ui5-text>Submitting...</ui5-text>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+</ui5-dynamic-page>
+
+<ui5-dialog
+  header-text="Add Submission"
+  [open]="showAddDialog()"
+  (close)="closeAddDialog()"
+>
+  <div class="dialog-content">
+    <div class="form-field">
+      <ui5-label for="source-material" required>Choose an SKZ material</ui5-label>
+      @if (!skzMaterials().length) {
+        <ui5-text>No SKZ materials found - create one in the SKZ Materials provider first.</ui5-text>
+      } @else {
+        <ui5-select id="source-material" (change)="onSourcePick($event)">
+          <ui5-option value="">Choose...</ui5-option>
+          @for (m of skzMaterials(); track m.metadata.name) {
+            <ui5-option [value]="m.metadata.name">{{ m.spec?.name }}</ui5-option>
+          }
+        </ui5-select>
+      }
+    </div>
+  </div>
+  <div slot="footer" class="dialog-footer">
+    <ui5-button design="Transparent" (click)="closeAddDialog()">Cancel</ui5-button>
+    <ui5-button design="Emphasized" (click)="confirmAdd()">Add</ui5-button>
+  </div>
+</ui5-dialog>
+
+<ui5-dialog
+  header-text="Material name already exists"
+  [open]="showRenameDialog()"
+  (close)="cancelRename()"
+>
+  <div class="dialog-content">
+    <ui5-text>StromungsRaum already has a material with this name. Choose a new one.</ui5-text>
+    <div class="form-field">
+      <ui5-label for="rename-input" required>Name</ui5-label>
+      <ui5-input
+        id="rename-input"
+        [value]="renameValue()"
+        (input)="onRenameInput($event)"
+      ></ui5-input>
+    </div>
+  </div>
+  <div slot="footer" class="dialog-footer">
+    <ui5-button design="Transparent" (click)="cancelRename()">Cancel</ui5-button>
+    <ui5-button design="Emphasized" (click)="confirmRename()">Save</ui5-button>
+  </div>
+</ui5-dialog>

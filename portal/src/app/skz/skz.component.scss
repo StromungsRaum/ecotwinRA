@@ -76,9 +76,14 @@
   flex-direction: column;
   gap: 0.25rem;
 
-  ui5-input {
+  ui5-input,
+  ui5-textarea {
     width: 100%;
   }
+}
+
+.error-text {
+  color: var(--ianusNegativeTextColor);
 }
 
 .dialog-footer {

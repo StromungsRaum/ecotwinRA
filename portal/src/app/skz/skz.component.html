@@ -1,6 +1,7 @@
 <!--
-  SKZ Materials UI - dummy/demo provider: "+" creates a card with just a
-  material name; parameters are canned placeholder values (see skz.service.ts).
+  SKZ Materials UI - dummy/demo provider: "+" pastes a full material
+  characterization JSON (shape: docs/assets/EastmanPlastics1000.json) and
+  creates one card per material.
 -->
 <ui5-dynamic-page>
   <ui5-dynamic-page-title slot="titleArea">
@@ -20,7 +21,7 @@
     } @else if (materials().length === 0) {
       <div class="empty-state">
         <ui5-title level="H5">No materials yet</ui5-title>
-        <ui5-text>Click "Add" to register a material's parameters.</ui5-text>
+        <ui5-text>Click "Add" and paste a material characterization JSON.</ui5-text>
       </div>
     } @else {
       <div class="skz-grid">
@@ -31,12 +32,22 @@
               <ui5-button icon="decline" design="Transparent" tooltip="Delete" (click)="deleteMaterial(material)"></ui5-button>
             </div>
             <div class="skz-field">
-              @for (entry of (material.spec?.parameters | keyvalue); track entry.key) {
-                <div class="skz-param-row">
-                  <ui5-label>{{ entry.key }}</ui5-label>
-                  <ui5-text>{{ entry.value }}</ui5-text>
-                </div>
-              }
+              <div class="skz-param-row">
+                <ui5-label>Type</ui5-label>
+                <ui5-text>{{ material.spec?.data?.type }}</ui5-text>
+              </div>
+              <div class="skz-param-row">
+                <ui5-label>Structure</ui5-label>
+                <ui5-text>{{ material.spec?.structure }}</ui5-text>
+              </div>
+              <div class="skz-param-row">
+                <ui5-label>Density</ui5-label>
+                <ui5-text>{{ material.spec?.data?.density }} kg/m3</ui5-text>
+              </div>
+              <div class="skz-param-row">
+                <ui5-label>Melt range</ui5-label>
+                <ui5-text>{{ material.spec?.min_melt_temp }}-{{ material.spec?.max_melt_temp }} C</ui5-text>
+              </div>
             </div>
           </div>
         }
@@ -52,13 +63,27 @@
 >
   <div class="dialog-content">
     <div class="form-field">
-      <ui5-label for="material-name" required>Material Name</ui5-label>
+      <ui5-label for="material-name" required>Name</ui5-label>
       <ui5-input
         id="material-name"
-        placeholder="e.g. Luran 368R"
-        [value]="newMaterialName()"
+        placeholder="Enter a name"
+        [value]="materialName()"
         (input)="onNameInput($event)"
       ></ui5-input>
+    </div>
+    <div class="form-field">
+      <ui5-label for="material-json" required>Material JSON</ui5-label>
+      <ui5-textarea
+        id="material-json"
+        placeholder="Paste a material characterization JSON (see docs/assets/EastmanPlastics1000.json)"
+        [rows]="16"
+        growing
+        [value]="materialJson()"
+        (input)="onJsonInput($event)"
+      ></ui5-textarea>
+      @if (jsonError()) {
+        <ui5-text class="error-text">{{ jsonError() }}</ui5-text>
+      }
     </div>
   </div>
   <div slot="footer" class="dialog-footer">

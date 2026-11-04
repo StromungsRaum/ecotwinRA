@@ -50,6 +50,10 @@ IM_INIT_BINARY_NAME = injectionmolding-init
 # SKZ provider binary name (dummy/demo provider, no operator - bootstrap only)
 SKZ_INIT_BINARY_NAME = skz-init
 
+# IANUS Simulation - Materials provider binary names
+MAT_BINARY_NAME = materials
+MAT_INIT_BINARY_NAME = materials-init
+
 # Build directory
 BUILD_DIR = bin
 
@@ -72,6 +76,10 @@ API_PORT ?= 8000
 # Injection Molding Service provider image parameters
 IM_IMAGE_NAME ?= injectionmolding-controller
 IM_IMAGE ?= $(IMAGE_REGISTRY)/$(IM_IMAGE_NAME):$(IMAGE_TAG)
+
+# IANUS Simulation - Materials provider image parameters
+MAT_IMAGE_NAME ?= materials-controller
+MAT_IMAGE ?= $(IMAGE_REGISTRY)/$(MAT_IMAGE_NAME):$(IMAGE_TAG)
 
 .PHONY: all
 all: build
@@ -173,12 +181,57 @@ generate-skz: $(CONTROLLER_GEN) manifests-skz apiresourceschemas-skz
 ## manifests-skz: Generate CRD manifests for the skz provider
 .PHONY: manifests-skz
 manifests-skz: $(CONTROLLER_GEN)
-	$(CONTROLLER_GEN) crd paths="./apis/skz/..." output:crd:artifacts:config=config/crds-skz
+	# allowDangerousTypes=true: the Material CRD mirrors a real material characterization
+	# file (docs/assets/EastmanPlastics1000.json) - its fields are physical float values,
+	# not k8s resource quantities, so controller-gen's string-serialization suggestion
+	# doesn't fit; no other CRD in this repo needs this.
+	$(CONTROLLER_GEN) crd:allowDangerousTypes=true paths="./apis/skz/..." output:crd:artifacts:config=config/crds-skz
 
 ## apiresourceschemas-skz: Generate APIResourceSchemas from CRDs for the skz provider
 .PHONY: apiresourceschemas-skz
 apiresourceschemas-skz: manifests-skz $(APIGEN)
 	$(APIGEN) --input-dir=config/crds-skz --output-dir=config/kcp-skz
+
+## build-operator-materials: Build the materials operator binary
+.PHONY: build-operator-materials
+build-operator-materials: fmt vet
+	$(GOBUILD) -o $(BUILD_DIR)/$(MAT_BINARY_NAME) ./cmd/materials/...
+
+## build-init-materials: Build the materials init/bootstrap binary
+.PHONY: build-init-materials
+build-init-materials: fmt vet
+	$(GOBUILD) -o $(BUILD_DIR)/$(MAT_INIT_BINARY_NAME) ./cmd/materials-init/...
+
+## build-materials: Build both materials binaries (operator + init)
+.PHONY: build-materials
+build-materials: build-operator-materials build-init-materials
+
+## run-materials: Run the materials operator locally
+.PHONY: run-materials
+run-materials: fmt vet
+	$(GORUN) ./cmd/materials/main.go --endpointslice=materials.platform-mesh.io
+
+## init-materials: Bootstrap materials provider resources into workspace (requires KUBECONFIG, optional HOST_OVERRIDE)
+.PHONY: init-materials
+init-materials: build-init-materials
+	$(BUILD_DIR)/$(MAT_INIT_BINARY_NAME) $(if $(HOST_OVERRIDE),--host-override=$(HOST_OVERRIDE))
+
+## generate-materials: Generate code (deepcopy, etc.) and kcp resources for the materials provider
+.PHONY: generate-materials
+generate-materials: $(CONTROLLER_GEN) manifests-materials apiresourceschemas-materials
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./apis/materials/..."
+
+## manifests-materials: Generate CRD manifests for the materials provider
+.PHONY: manifests-materials
+manifests-materials: $(CONTROLLER_GEN)
+	# allowDangerousTypes=true: MaterialSubmission.spec.material mirrors the SKZ Material
+	# CRD's physical float fields - see manifests-skz's comment for why.
+	$(CONTROLLER_GEN) crd:allowDangerousTypes=true paths="./apis/materials/..." output:crd:artifacts:config=config/crds-materials
+
+## apiresourceschemas-materials: Generate APIResourceSchemas from CRDs for the materials provider
+.PHONY: apiresourceschemas-materials
+apiresourceschemas-materials: manifests-materials $(APIGEN)
+	$(APIGEN) --input-dir=config/crds-materials --output-dir=config/kcp-materials
 
 ## fmt: Run go fmt
 .PHONY: fmt
@@ -235,13 +288,23 @@ image-build-injectionmolding:
 image-push-injectionmolding: image-build-injectionmolding
 	docker push $(IM_IMAGE)
 
+## image-build-materials: Build materials controller container image locally
+.PHONY: image-build-materials
+image-build-materials:
+	docker build -t $(MAT_IMAGE) -f deploy/materials.Dockerfile .
+
+## image-push-materials: Push materials controller container image to registry
+.PHONY: image-push-materials
+image-push-materials: image-build-materials
+	docker push $(MAT_IMAGE)
+
 ## images: Build all container images
 .PHONY: images
-images: image-build portal-image-build image-build-injectionmolding
+images: image-build portal-image-build image-build-injectionmolding image-build-materials
 
 ## images-push: Push all container images
 .PHONY: images-push
-images-push: image-push portal-image-push image-push-injectionmolding
+images-push: image-push portal-image-push image-push-injectionmolding image-push-materials
 
 # Kind cluster parameters
 KIND_CLUSTER ?= platform-mesh
@@ -266,9 +329,14 @@ kind-load-api: api-image-build
 kind-load-injectionmolding: image-build-injectionmolding
 	kind load docker-image $(IM_IMAGE) --name $(KIND_CLUSTER)
 
+## kind-load-materials: Load materials controller image into kind cluster
+.PHONY: kind-load-materials
+kind-load-materials: image-build-materials
+	kind load docker-image $(MAT_IMAGE) --name $(KIND_CLUSTER)
+
 ## kind-load-all: Load all images into kind cluster
 .PHONY: kind-load-all
-kind-load-all: kind-load kind-load-portal kind-load-injectionmolding
+kind-load-all: kind-load kind-load-portal kind-load-injectionmolding kind-load-materials
 
 ## portal-run: Run portal container locally (accessible at http://localhost:$(PORTAL_PORT))
 .PHONY: portal-run

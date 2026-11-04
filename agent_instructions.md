@@ -38,8 +38,13 @@ what `/api/automated_user/submission` does atomically into separate calls:
 
 - `ComponentController` (`/platform/components`) — a component is created from a `component_type` uuid
   (see `component_types`) + parameters/child-component slots.
-- `ComponentTypeController` (`/platform/component_types`), `MaterialController` (`/platform/materials`),
-  `FormController` (`/platform/forms`) — read-only reference/lookup data.
+- `ComponentTypeController` (`/platform/component_types`), `FormController` (`/platform/forms`) —
+  read-only reference/lookup data.
+- `MaterialController` (`/platform/materials`) — **not read-only**: `GET` lists, `POST` creates (`name` +
+  `sections.{data,temperature,viscosity,heat,injection_molding,pvt}`, each `{method, parameters}` except
+  `data`). Consumed on the Go side by `ecotwinRA`'s own `materials` provider
+  (`apis/materials/v1alpha1`, `pkg/simod/client.go`'s `CreateMaterial`/`ListMaterials`,
+  `operator/materials/`) — not by this repo's Python `api_connector.py`.
 - `DigitalTwinController` (`/platform/digital_twins`) — creates a digital twin from a `component_id`
   (delegates to the internal `Api\DigitalTwinController::store()`, narrowed to the component-only creation
   path — the file/screw creation paths aren't exposed at this layer).

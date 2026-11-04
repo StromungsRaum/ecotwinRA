@@ -1,0 +1,73 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/platform-mesh/materials-controller
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 65532
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Controller configuration
+controller:
+  endpointSlice: "materials.platform-mesh.io"
+  # simodBaseURL drives the SIMOD API calls made by both reconcilers
+  # (operator/materials) - bump this to backend.int.simod.de, then
+  # backend.simod.de, as feat/platform-api progresses from dev to int to
+  # prod (same pattern as injectionmolding-controller's chart).
+  simodBaseURL: "https://backend.dev.simod.de"
+
+# kcp kubeconfig secret
+kubeconfig:
+  secretName: "materials-controller-kubeconfig"
+  secretKey: "kubeconfig"
+
+# Dev CA bundle: backend.dev.simod.de serves a certificate this image's
+# minimal CA set doesn't trust ("x509: certificate signed by unknown
+# authority"). injectionmolding-controller works around this today via a
+# live-only (not-in-chart) ConfigMap + SSL_CERT_FILE patch - this chart makes
+# the same workaround declarative instead, so it survives `helm upgrade`.
+# The ConfigMap (key `ca-certificates.crt`) must exist in this release's
+# namespace before install/upgrade - copy it from an existing
+# `<provider>-dev-ca-bundle` ConfigMap, e.g.:
+#   kubectl get cm injectionmolding-dev-ca-bundle -n provider-injection-molding -o yaml \
+#     | yq '.metadata = {"name": "materials-dev-ca-bundle", "namespace": "provider-materials"}' \
+#     | kubectl apply -f -
+devCaBundle:
+  enabled: true
+  configMapName: "materials-dev-ca-bundle"

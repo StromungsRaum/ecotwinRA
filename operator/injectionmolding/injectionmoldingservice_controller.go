@@ -123,7 +123,7 @@ func (r *InjectionMoldingServiceReconciler) Reconcile(ctx context.Context, req m
 			summaries = append(summaries, injectionmoldingv1alpha1.SimulationSummary{
 				ID:     sim.ID,
 				Name:   sim.Name,
-				Status: sim.Status,
+				Status: displayStatus(sim),
 			})
 		}
 
@@ -143,11 +143,15 @@ func (r *InjectionMoldingServiceReconciler) Reconcile(ctx context.Context, req m
 			return reconcile.Result{}, err
 		}
 
+		// sim.Status (coarse: complete/canceled/error/contract_limit_reached/
+		// processing) drives completion, not the display string below - keep
+		// using it here even though displayStatus prefers the granular value,
+		// since StatusDetail has no guaranteed terminal-state vocabulary.
 		complete := sim.Status == "complete"
 		monitored := &injectionmoldingv1alpha1.MonitoredSimulationStatus{
 			ID:           sim.ID,
 			Name:         sim.Name,
-			Status:       sim.Status,
+			Status:       displayStatus(*sim),
 			Complete:     complete,
 			LastPolledAt: time.Now().UTC().Format(time.RFC3339),
 		}

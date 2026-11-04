@@ -1,7 +1,7 @@
 apiVersion: apis.kcp.io/v1alpha1
 kind: APIResourceSchema
 metadata:
-  name: v261024-7eb08e3.materials.skz.platform-mesh.io
+  name: v261103-644c8ff.materials.skz.platform-mesh.io
 spec:
   group: skz.platform-mesh.io
   names:
@@ -14,6 +14,9 @@ spec:
   - additionalPrinterColumns:
     - jsonPath: .spec.name
       name: Name
+      type: string
+    - jsonPath: .spec.data.type
+      name: Type
       type: string
     name: v1alpha1
     schema:
@@ -41,12 +44,16 @@ spec:
             MaterialSpec defines the desired state of Material.
 
             SKZ is a dummy/demo provider: there is no real material-testing backend
-            behind this CRD, no operator, and no status - the portal fills Parameters
-            with canned placeholder values at creation time. The field is a flat
-            key/value bag rather than the real ianus-simod Platform API's sectioned
-            `POST /api/platform/materials` shape (sections.{temperature,viscosity,heat,
-            injection_molding,pvt}, each {method, parameters}) deliberately - this is
-            illustrative, not a real material characterization.
+            behind this CRD, no operator, and no status. Unlike the provider's
+            original flat Parameters map[string]string bag, this shape is a 1:1
+            mirror of a real material characterization file
+            (docs/assets/EastmanPlastics1000.json) and of the sections
+            ianus-simod's real Platform API accepts at `POST /api/platform/materials`
+            (`sections.{temperature,viscosity,heat,injection_molding,pvt}`, each a
+            `{method, parameters}` pair) - this CRD groups the same data by model
+            instead of by generic method/parameters, since every field here has a
+            known, fixed shape. The "IANUS Simulation - Materials" provider is what
+            translates an instance of this CRD into that backend's sections payload.
 
             NOTE: the Kind is "Material", not "MaterialParameters" - a Kind name
             ending in "s" breaks the Platform Mesh CRD Gateway's pluralization (it
@@ -54,21 +61,243 @@ spec:
             MaterialParameters(name, namespace) getter), confirmed live against the
             real gateway before renaming.
           properties:
+            abs_max_melt_temp:
+              description: AbsMaxMeltTemp is the absolute maximum melt temperature.
+              type: number
+            data:
+              description: Data is the material's general/physical data.
+              properties:
+                density:
+                  type: number
+                heatcapacity:
+                  type: number
+                heatconductivity:
+                  type: number
+                material_number:
+                  type: string
+                norm:
+                  type: string
+                type:
+                  type: string
+              required:
+              - density
+              - heatcapacity
+              - heatconductivity
+              - material_number
+              - norm
+              - type
+              type: object
+            eject_temp:
+              description: EjectTemp is the part ejection temperature.
+              type: number
+            freeze_temp:
+              description: FreezeTemp is the freeze temperature.
+              type: number
+            heatModel:
+              description: HeatModel is the material's heat model.
+              properties:
+                model:
+                  type: string
+                thermaldata:
+                  items:
+                    description: |-
+                      ThermalDataPoint is one row of HeatModel.Thermaldata - temperature-indexed
+                      heat/density data, mirrors EastmanPlastics1000.json's
+                      "heatModel.thermaldata[]" entries.
+                    properties:
+                      density:
+                        type: number
+                      heatcapacity:
+                        type: number
+                      heatconductivity:
+                        type: number
+                      temperature:
+                        type: number
+                    required:
+                    - density
+                    - heatcapacity
+                    - heatconductivity
+                    - temperature
+                    type: object
+                  type: array
+              required:
+              - model
+              - thermaldata
+              type: object
+            max_melt_temp:
+              description: MaxMeltTemp is the maximum recommended melt temperature.
+              type: number
+            max_shear_rate:
+              description: MaxShearRate is the material's maximum allowable shear
+                rate.
+              type: number
+            max_shear_stress:
+              description: MaxShearStress is the material's maximum allowable shear
+                stress.
+              type: number
+            mech_properties:
+              description: MechProperties are the material's mechanical properties.
+              properties:
+                E_avg:
+                  type: number
+                E1:
+                  type: number
+                E2:
+                  type: number
+                G12:
+                  type: number
+                alpha_1:
+                  type: number
+                alpha_2:
+                  type: number
+                v12:
+                  type: number
+                v23:
+                  type: number
+              required:
+              - E1
+              - E2
+              - E_avg
+              - G12
+              - alpha_1
+              - alpha_2
+              - v12
+              - v23
+              type: object
+            melt_density:
+              description: MeltDensity is the material's density in the melt state.
+              type: number
+            min_melt_temp:
+              description: MinMeltTemp is the minimum recommended melt temperature.
+              type: number
             name:
-              description: |-
-                Name is the material's name, e.g. "Luran 368R", chosen by the user when
-                provisioning this material.
+              description: Name is the material's name, e.g. "Eastman Plastics Foo
+                1000".
               type: string
-            parameters:
-              additionalProperties:
-                type: string
-              description: |-
-                Parameters are dummy material parameter values keyed by name (e.g.
-                "density", "meltTemperature"). Filled in by the portal with placeholder
-                values, not measured data.
+            pvtmodel:
+              description: PVTModel is the material's pressure-volume-temperature
+                model.
+              properties:
+                b1m:
+                  type: number
+                b1s:
+                  type: number
+                b2m:
+                  type: number
+                b2s:
+                  type: number
+                b3m:
+                  type: number
+                b3s:
+                  type: number
+                b4m:
+                  type: number
+                b4s:
+                  type: number
+                b5:
+                  type: number
+                b6:
+                  type: number
+                b7:
+                  type: number
+                b8:
+                  type: number
+                b9:
+                  type: number
+                model:
+                  type: string
+              required:
+              - b1m
+              - b1s
+              - b2m
+              - b2s
+              - b3m
+              - b3s
+              - b4m
+              - b4s
+              - b5
+              - b6
+              - b7
+              - b8
+              - b9
+              - model
+              type: object
+            shrinkage_properties:
+              description: ShrinkageProperties are the material's shrinkage properties.
+              properties:
+                avg_nominal:
+                  type: number
+                parallel:
+                  type: number
+                perpendicular:
+                  type: number
+              required:
+              - avg_nominal
+              - parallel
+              - perpendicular
+              type: object
+            solid_density:
+              description: SolidDensity is the material's density in the solid state.
+              type: number
+            structure:
+              description: Structure describes the material's morphology, e.g. "amorphous".
+              type: string
+            tempModel:
+              description: TempModel is the material's temperature-shift model.
+              properties:
+                D3:
+                  type: number
+                c1:
+                  type: number
+                c2:
+                  type: number
+                model:
+                  type: string
+                referenceTemperature:
+                  type: number
+              required:
+              - D3
+              - c1
+              - c2
+              - model
+              - referenceTemperature
+              type: object
+            viscoModel:
+              description: ViscoModel is the material's viscosity model.
+              properties:
+                critical_stress_level:
+                  type: number
+                exponent:
+                  type: number
+                model:
+                  type: string
+                zero_viscosity:
+                  type: number
+              required:
+              - critical_stress_level
+              - exponent
+              - model
+              - zero_viscosity
               type: object
           required:
+          - abs_max_melt_temp
+          - data
+          - eject_temp
+          - freeze_temp
+          - heatModel
+          - max_melt_temp
+          - max_shear_rate
+          - max_shear_stress
+          - mech_properties
+          - melt_density
+          - min_melt_temp
           - name
+          - pvtmodel
+          - shrinkage_properties
+          - solid_density
+          - structure
+          - tempModel
+          - viscoModel
           type: object
       type: object
     served: true

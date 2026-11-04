@@ -44,9 +44,12 @@
                 <div class="im-field">
                   <div class="im-field-row">
                     <ui5-label>Select a simulation</ui5-label>
-                    <ui5-button design="Transparent" icon="refresh" (click)="refresh(svc)">Refresh</ui5-button>
+                    <ui5-button design="Transparent" icon="refresh" [disabled]="isRefreshing(svc.metadata.name)" (click)="refresh(svc)">Refresh</ui5-button>
                   </div>
                   <ui5-label class="timestamp-label">Last refreshed: {{ formatTimestamp(svc.status?.lastRefreshedAt) }}</ui5-label>
+                  @if (isRefreshing(svc.metadata.name)) {
+                    <ui5-label class="timestamp-label">Refreshing...</ui5-label>
+                  }
                   @if (!svc.status?.availableSimulations?.length) {
                     <ui5-text>No simulations fetched yet - click Refresh.</ui5-text>
                   } @else {

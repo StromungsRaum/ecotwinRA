@@ -85,3 +85,15 @@ func simulationURL(id string) (string, error) {
 	u.Path = "/simulation/" + id
 	return u.String(), nil
 }
+
+// displayStatus prefers a simod.SimulationResponse's ungrouped StatusDetail
+// (e.g. "pending", "enqueued", "paused") over its coarse Status (which
+// collapses every non-terminal state to "processing" - see
+// SimulationResponse's doc), falling back to Status if StatusDetail is empty
+// (an older backend that predates the status_detail field).
+func displayStatus(sim simod.SimulationResponse) string {
+	if sim.StatusDetail != "" {
+		return sim.StatusDetail
+	}
+	return sim.Status
+}

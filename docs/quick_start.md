@@ -162,23 +162,60 @@ KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade --install injectionmolding-controlle
 ```
 
 `--simod-base-url` (default `https://backend.dev.simod.de`, chart value `controller.simodBaseURL`)
-is the real external SIMOD/StrömungsRaum backend this provider calls — see step 6.
+is the real external SIMOD/StrömungsRaum backend this provider calls — see step 7.
 
-## 6. Verify
+## 6. Register the `ianus-materials` provider
+
+Third sibling provider — two CRDs (`MaterialCatalog`, `MaterialSubmission`) instead of one, same pattern
+otherwise:
+
+```shell
+# 6a. Provider workspace (sibling of `ianus` and `ianus-injection-molding`)
+KUBECONFIG=$PM_KUBECONFIG kubectl ws use :
+KUBECONFIG=$PM_KUBECONFIG kubectl ws create providers --type=root:providers --enter --ignore-existing
+KUBECONFIG=$PM_KUBECONFIG kubectl ws create ianus-materials --type=root:provider --enter --ignore-existing
+
+# 6b. Bootstrap
+KUBECONFIG=$PM_KUBECONFIG make init-materials HOST_OVERRIDE=https://frontproxy-front-proxy.platform-mesh-system:8443
+
+# 6c. Extract the operator kubeconfig
+KUBECONFIG=$PM_KUBECONFIG kubectl get secret materials-controller-kubeconfig -n default -o jsonpath='{.data.kubeconfig}' | base64 -d > materials.kubeconfig
+
+# 6d. Build + load the image
+make image-build-materials kind-load-materials IMAGE_TAG=$IMAGE_TAG
+
+# 6e. Deploy
+KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create namespace provider-materials
+KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create secret generic materials-controller-kubeconfig \
+  --from-file=kubeconfig=./materials.kubeconfig -n provider-materials
+
+KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade --install materials-controller ./deploy/helm/materials-controller \
+  --namespace provider-materials --set image.tag=$IMAGE_TAG --set image.pullPolicy=IfNotPresent
+```
+
+This provider submits a material characterized in the `skz` provider (step... well, SKZ isn't covered as
+its own registration step here since it predates this walkthrough — its CRD only needs an account
+workspace bound to `skz.platform-mesh.io`'s APIExport, no separate operator to deploy) to the real
+StrömungsRaum backend — see [platform-mesh.md](./platform-mesh.md#ianus-simulation---materials-provider)
+for the full cross-provider data flow.
+
+## 7. Verify
 
 ```shell
 # Marketplace entries (APIExport + ProviderMetadata) for each provider
 kubectl --server="https://localhost:8443/services/marketplace/clusters/root:providers:ianus" get marketplaceentries -A
 kubectl --server="https://localhost:8443/services/marketplace/clusters/root:providers:ianus-injection-molding" get marketplaceentries -A
+kubectl --server="https://localhost:8443/services/marketplace/clusters/root:providers:ianus-materials" get marketplaceentries -A
 
 KUBECONFIG=$COMPUTE_KUBECONFIG kubectl get pods -n provider-models
 KUBECONFIG=$COMPUTE_KUBECONFIG kubectl get pods -n provider-injection-molding
+KUBECONFIG=$COMPUTE_KUBECONFIG kubectl get pods -n provider-materials
 ```
 
-Open <https://portal.localhost:8443>, log in, and the `ianus` and injection-molding provider
-UIs should appear once an account workspace binds their APIExports.
+Open <https://portal.localhost:8443>, log in, and the `ianus`, injection-molding, and materials
+provider UIs should appear once an account workspace binds their APIExports.
 
-## 7. Run the StrömungsRaum frontend and backend locally
+## 8. Run the StrömungsRaum frontend and backend locally
 
 The providers' controllers and CRDs (`Component`, `DigitalTwin`, `ExecutionParameter`, `Simulation`,
 `InjectionMoldingService`) talk to the external StrömungsRaum/SIMOD backend
@@ -194,14 +231,14 @@ duplicate them here.
 The optional **cadbuilder** and **stlbuilder** container overlays need to be enabled
 (visible as the `dev-simod-cadbuilder-1`/`dev-simod-stlbuilder-1` containers).
 
-### 7a. Access
+### 8a. Access
 
 - Frontend: <https://dev.simod.de>
 - Backend admin: <https://backend.dev.simod.de>
 - phpMyAdmin: `127.0.0.1:8082`
 - MailHog (dev mail capture): <http://localhost:8025>
 
-### 7b. Wiring this provider repo to it
+### 8b. Wiring this provider repo to it
 
 Point the `ecotwinRA` operators/CRDs at this local backend instead of `backend.dev.simod.de`
 directly if you want an isolated loop:
@@ -221,7 +258,7 @@ kubectl --server https://kcp.api.portal.localhost:8443/clusters/root:orgs:<org-n
 where <org-name>, <org-user>, <simod-email> and <simod-password> need to be replaced with adequate values. 
 
 Credentials go in a same-namespace `Secret` with `email`/`password` keys, referenced by each CR's
-`spec.secretRefs[0]` — create a user via step 7d first.
+`spec.secretRefs[0]` — create a user on the backend admin UI (step 8a) first.
 
 If the provider's controller runs **inside the kind cluster** (not `go run` on the host) talking to
 this same-machine backend, see the "Local-sandbox-only gotchas" section in
@@ -229,7 +266,7 @@ this same-machine backend, see the "Local-sandbox-only gotchas" section in
 for the DNS/TLS workarounds that entails (host aliases, trusting the self-signed cert on the host
 and inside the controller's container image).
 
-## 8. Install the Slurm scheduler
+## 9. Install the Slurm scheduler
 
 The backend's "act as cluster" feature (`Kunden Firmen / Benutzer` → `Cluster Computer` permission,
 `Cluster / Clusterliste`) submits simulation jobs to a Slurm cluster. This section installs just the
@@ -239,14 +276,14 @@ layer (the private `runner`/`simodlib`/`simodclustercomponents` repos and the `s
 that turns a submitted Slurm job into an actual running simulation — that's a different, private
 piece of the pipeline, out of scope here.
 
-### 8a. Install packages
+### 9a. Install packages
 
 ```shell
 sudo apt-get update
 sudo apt-get install -y munge slurmd slurmctld slurmdbd mariadb-server
 ```
 
-### 8b. Munge (inter-daemon authentication)
+### 9b. Munge (inter-daemon authentication)
 
 ```shell
 sudo systemctl enable --now munge
@@ -256,7 +293,7 @@ systemctl status munge --no-pager
 A single-node setup works with the key `apt` generated for you at `/etc/munge/munge.key` — nothing
 further to do unless you're joining more than one node to the cluster.
 
-### 8c. Accounting database
+### 9c. Accounting database
 
 Slurm's accounting (`AccountingStorageType=accounting_storage/slurmdbd`) needs its own MariaDB
 database and user:
@@ -267,7 +304,7 @@ sudo mysql -e "CREATE USER 'slurm'@'localhost' IDENTIFIED BY '<pick-a-password>'
 sudo mysql -e "GRANT ALL PRIVILEGES ON slurm_acct_db.* TO 'slurm'@'localhost';"
 ```
 
-### 8d. `/etc/slurm/slurmdbd.conf`
+### 9d. `/etc/slurm/slurmdbd.conf`
 
 ```ini
 AuthType=auth/munge
@@ -288,7 +325,7 @@ sudo chown slurm:slurm /etc/slurm/slurmdbd.conf
 sudo chmod 600 /etc/slurm/slurmdbd.conf
 ```
 
-### 8e. `/etc/slurm/slurm.conf`
+### 9e. `/etc/slurm/slurm.conf`
 
 Single-node cluster where the controller and the (only) compute node are the same machine — this
 is exactly this machine's config, generalized to detect your own hostname/CPU/memory:
@@ -344,7 +381,7 @@ sudo mkdir -p /var/lib/slurm-llnl/slurmctld /var/lib/slurm-llnl/slurmd /var/log/
 sudo chown slurm:slurm /var/lib/slurm-llnl/slurmctld /var/lib/slurm-llnl/slurmd /var/log/slurm-llnl /var/run/slurm
 ```
 
-### 8f. Start everything and register the cluster
+### 9f. Start everything and register the cluster
 
 ```shell
 sudo systemctl enable --now slurmdbd
@@ -356,7 +393,7 @@ sacctmgr -i add cluster localcluster
 sudo systemctl restart slurmctld
 ```
 
-### 8g. Verify
+### 9g. Verify
 
 ```shell
 sinfo            # expect: PARTITION LocalQ, STATE idle, your hostname listed
@@ -368,7 +405,7 @@ The `partitions` block (`name: LocalQ`, `num_cores_per_node`, `max_nodes`, `memo
 cluster-agent config (`cluster_config.scheduler_type: slurm`) points at should match the
 `PartitionName=LocalQ` line above — adjust either side to keep them consistent.
 
-## 9. Cleanup
+## 10. Cleanup
 
 ```shell
 kind delete cluster --name platform-mesh

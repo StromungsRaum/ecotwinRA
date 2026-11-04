@@ -8,7 +8,7 @@ spec:
   resources:
   - group: skz.platform-mesh.io
     name: materials
-    schema: v261024-7eb08e3.materials.skz.platform-mesh.io
+    schema: v261103-644c8ff.materials.skz.platform-mesh.io
     storage:
       crd: {}
 status: {}

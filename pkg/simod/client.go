@@ -225,10 +225,23 @@ type SimulationRequest struct {
 
 // SimulationResponse is the shape returned by the simulations endpoints.
 type SimulationResponse struct {
-	ID                string   `json:"id"`
-	Name              string   `json:"name"`
-	DigitalTwinID     string   `json:"digital_twin_id"`
-	Status            string   `json:"status"`
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	DigitalTwinID string `json:"digital_twin_id"`
+
+	// Status is a coarse bucket - every non-terminal state (pending, enqueued,
+	// paused, etc.) collapses to "processing" (ianus-simod's
+	// Simulation::getSimpleStatus()). Kept as-is for completion checks and
+	// Notification, which are keyed off this coarse value.
+	Status string `json:"status"`
+
+	// StatusDetail is the ungrouped status (e.g. "pending", "enqueued",
+	// "paused"), added to ianus-simod's SimulationResource alongside `status`
+	// (not replacing it) specifically so callers that want to *display* the
+	// real state - rather than just check for completion - have something to
+	// show. Empty on an older backend that predates this field.
+	StatusDetail string `json:"status_detail"`
+
 	Notification      string   `json:"notification"`
 	SimulationFileIDs []string `json:"simulation_file_ids"`
 	CreatedAt         string   `json:"created_at"`
@@ -266,4 +279,71 @@ func (c *Client) GetSimulation(ctx context.Context, token, id string) (*Simulati
 		return nil, err
 	}
 	return &out.Data, nil
+}
+
+// MaterialSection is one named section of a material characterization as
+// accepted by POST /api/platform/materials - every section but "data" is a
+// {method, parameters} pair (ianus-simod's MaterialController validates each
+// as `sometimes|string`/`sometimes|array` - Parameters is deliberately `any`,
+// not map[string]string like ComponentRequest.Parameters, because a
+// section's shape varies: e.g. heat's parameters is a list of
+// temperature-indexed rows, not a flat map).
+type MaterialSection struct {
+	Method     string `json:"method,omitempty"`
+	Parameters any    `json:"parameters,omitempty"`
+}
+
+// MaterialSections groups a material's characterization data into the
+// sections /api/platform/materials expects. Data is `any` for the same
+// reason as MaterialSection.Parameters - the backend validates it only as
+// `required|array`.
+type MaterialSections struct {
+	Data             any              `json:"data"`
+	Temperature      *MaterialSection `json:"temperature,omitempty"`
+	Viscosity        *MaterialSection `json:"viscosity,omitempty"`
+	Heat             *MaterialSection `json:"heat,omitempty"`
+	InjectionMolding *MaterialSection `json:"injection_molding,omitempty"`
+	PVT              *MaterialSection `json:"pvt,omitempty"`
+}
+
+// MaterialRequest is the payload for POST /api/platform/materials.
+type MaterialRequest struct {
+	Name     string           `json:"name"`
+	Sections MaterialSections `json:"sections"`
+}
+
+// MaterialResponse is the shape returned by the materials endpoints.
+type MaterialResponse struct {
+	ID        string           `json:"id"`
+	Name      string           `json:"name"`
+	Sections  MaterialSections `json:"sections"`
+	CreatedAt string           `json:"created_at"`
+}
+
+// CreateMaterial calls POST /api/platform/materials. Like the list endpoint,
+// the single-resource response is wrapped as {"data": {...}} - Laravel's
+// default JsonResource wrapping, which MaterialResource (no withoutWrapping()
+// or $wrap=null override) doesn't opt out of - so the response is decoded
+// into a Data wrapper, not MaterialResponse directly (confirmed against
+// ianus-simod's MaterialController::store()/MaterialResource, 2026-11-04).
+func (c *Client) CreateMaterial(ctx context.Context, token string, req MaterialRequest) (*MaterialResponse, error) {
+	var out struct {
+		Data MaterialResponse `json:"data"`
+	}
+	if err := c.post(ctx, token, "/api/platform/materials", req, &out); err != nil {
+		return nil, err
+	}
+	return &out.Data, nil
+}
+
+// ListMaterials calls GET /api/platform/materials, returning every Material
+// belonging to the authenticated user's company.
+func (c *Client) ListMaterials(ctx context.Context, token string) ([]MaterialResponse, error) {
+	var out struct {
+		Data []MaterialResponse `json:"data"`
+	}
+	if err := c.get(ctx, token, "/api/platform/materials", &out); err != nil {
+		return nil, err
+	}
+	return out.Data, nil
 }

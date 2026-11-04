@@ -68,6 +68,7 @@ export class InjectionMoldingComponent implements OnDestroy {
   public showAddDialog = signal<boolean>(false);
   public newServiceName = signal<string>('');
   public pendingSelection = signal<Record<string, string>>({});
+  public refreshingNames = signal<Set<string>>(new Set());
 
   public ngOnInit(): void {
     LuigiClient.addInitListener(() => {
@@ -160,23 +161,47 @@ export class InjectionMoldingComponent implements OnDestroy {
     }
   }
 
+  public isRefreshing(name: string): boolean {
+    return this.refreshingNames().has(name);
+  }
+
+  private setRefreshing(name: string, value: boolean): void {
+    this.refreshingNames.update((set) => {
+      const next = new Set(set);
+      if (value) {
+        next.add(name);
+      } else {
+        next.delete(name);
+      }
+      return next;
+    });
+  }
+
+  /** Requests a refresh and polls until the operator has processed it - same pattern as materials.component.ts's catalog refresh. */
   public refresh(svc: InjectionMoldingService): void {
-    this.client.requestRefresh(svc.metadata.name, svc.metadata.namespace || 'default').subscribe({
+    const name = svc.metadata.name;
+    const namespace = svc.metadata.namespace || 'default';
+    if (this.isRefreshing(name)) {
+      return;
+    }
+
+    const requestedAt = new Date().toISOString();
+    this.setRefreshing(name, true);
+    this.client.requestRefresh(name, namespace, requestedAt).subscribe({
       next: (ok) => {
-        if (!ok) {
+        if (ok) {
+          this.pollForRefresh(name, requestedAt, 20);
+        } else {
+          this.setRefreshing(name, false);
           LuigiClient.uxManager().showAlert({
             text: 'Failed to request a refresh',
             type: 'error',
             closeAfter: 3000,
           });
-          return;
         }
-        // The operator's refresh is near-instant (a single list call); a
-        // short delay then a reload is enough to pick it up, same idea as
-        // the continuous 5s poll but immediate for a user-triggered refresh.
-        setTimeout(() => this.load(), 1500);
       },
       error: () => {
+        this.setRefreshing(name, false);
         LuigiClient.uxManager().showAlert({
           text: 'Failed to request a refresh',
           type: 'error',
@@ -184,6 +209,33 @@ export class InjectionMoldingComponent implements OnDestroy {
         });
       },
     });
+  }
+
+  /**
+   * Polls list() every 1.5s until this card's status.lastProcessedRefreshRequestedAt
+   * catches up to the timestamp we sent (the reconciler processes a refresh in one
+   * reconcile, there's no separate "Refreshing" phase to watch). Gives up silently
+   * after ~30s so a slow/stuck reconcile doesn't disable the button forever.
+   */
+  private pollForRefresh(name: string, requestedAt: string, attemptsLeft: number): void {
+    if (attemptsLeft <= 0) {
+      this.setRefreshing(name, false);
+      return;
+    }
+    setTimeout(() => {
+      this.client.list().subscribe({
+        next: (services) => {
+          this.services.set(services);
+          const svc = services.find((s) => s.metadata.name === name);
+          if (svc?.status?.lastProcessedRefreshRequestedAt === requestedAt) {
+            this.setRefreshing(name, false);
+          } else {
+            this.pollForRefresh(name, requestedAt, attemptsLeft - 1);
+          }
+        },
+        error: () => this.pollForRefresh(name, requestedAt, attemptsLeft - 1),
+      });
+    }, 1500);
   }
 
   public onSimulationPick(svc: InjectionMoldingService, event: Event): void {
