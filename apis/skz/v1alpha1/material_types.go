@@ -180,6 +180,14 @@ type MaterialSpec struct {
 
 	// MaxShearRate is the material's maximum allowable shear rate.
 	MaxShearRate float64 `json:"max_shear_rate"`
+
+	// RawJSON is the exact material characterization JSON the user
+	// pasted/uploaded, verbatim - preserved alongside the parsed fields above
+	// so it can be forwarded as-is to StrömungsRaum's "Temporary Material
+	// Data" field on submission (see apis/materials/v1alpha1's
+	// MaterialSubmissionData.RawJSON and pkg/simod.MaterialRequest.Temporary).
+	// +optional
+	RawJSON string `json:"rawJson,omitempty"`
 }
 
 // +kubebuilder:object:root=true

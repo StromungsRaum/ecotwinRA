@@ -19,7 +19,7 @@ spec:
       crd: {}
   - group: materials.platform-mesh.io
     name: materialsubmissions
-    schema: v261104-c1fdfbd.materialsubmissions.materials.platform-mesh.io
+    schema: v261105-83eb0e2.materialsubmissions.materials.platform-mesh.io
     storage:
       crd: {}
 status: {}

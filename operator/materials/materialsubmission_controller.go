@@ -18,6 +18,7 @@ package materials
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -133,7 +134,7 @@ func (r *MaterialSubmissionReconciler) Reconcile(ctx context.Context, req mcreco
 // knowledge lives (see ianus-simod's MaterialController::SECTION_TO_COLUMN_PREFIX
 // for the backend side of this same mapping).
 func buildMaterialRequest(m *materialsv1alpha1.MaterialSubmissionData) simod.MaterialRequest {
-	return simod.MaterialRequest{
+	req := simod.MaterialRequest{
 		Name: m.Name,
 		Sections: simod.MaterialSections{
 			Data: map[string]any{
@@ -201,6 +202,10 @@ func buildMaterialRequest(m *materialsv1alpha1.MaterialSubmissionData) simod.Mat
 			},
 		},
 	}
+	if m.RawJSON != "" {
+		req.Temporary = json.RawMessage(m.RawJSON)
+	}
+	return req
 }
 
 // buildThermalData converts HeatModel.Thermaldata rows into the shape

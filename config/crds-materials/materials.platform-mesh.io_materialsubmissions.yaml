@@ -209,6 +209,12 @@ spec:
                     - b9
                     - model
                     type: object
+                  rawJson:
+                    description: |-
+                      RawJSON is the source SKZ Material's verbatim pasted/uploaded JSON,
+                      copied through unchanged - forwarded to StrömungsRaum as "Temporary
+                      Material Data" on submission (see pkg/simod.MaterialRequest.Temporary).
+                    type: string
                   shrinkage_properties:
                     description: ShrinkageProperties are the Material's shrinkage
                       properties.

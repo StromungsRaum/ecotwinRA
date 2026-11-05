@@ -116,6 +116,7 @@ export interface MaterialSpec {
   shrinkage_properties: ShrinkageProperties;
   max_shear_stress: number;
   max_shear_rate: number;
+  rawJson?: string;
 }
 
 export interface Material {
@@ -174,6 +175,7 @@ const CREATE_MUTATION = `
   mutation CreateMaterial(
     $name: String!
     $materialName: String!
+    $rawJson: String
     $data: SkzPlatformMeshIoV1alpha1MaterialSpecData_Input!
     $viscoModel: SkzPlatformMeshIoV1alpha1MaterialSpecViscoModel_Input!
     $heatModel: SkzPlatformMeshIoV1alpha1MaterialSpecHeatModel_Input!
@@ -200,6 +202,7 @@ const CREATE_MUTATION = `
             metadata: { name: $name }
             spec: {
               name: $materialName
+              rawJson: $rawJson
               data: $data
               viscoModel: $viscoModel
               heatModel: $heatModel
@@ -259,6 +262,7 @@ export class SkzService {
       .post(CREATE_MUTATION, {
         name: crName,
         materialName: spec.name,
+        rawJson: spec.rawJson,
         data: spec.data,
         viscoModel: spec.viscoModel,
         heatModel: spec.heatModel,

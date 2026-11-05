@@ -131,6 +131,11 @@ type MaterialSubmissionData struct {
 	ShrinkageProperties ShrinkageProperties `json:"shrinkage_properties"`
 	MaxShearStress      float64             `json:"max_shear_stress"`
 	MaxShearRate        float64             `json:"max_shear_rate"`
+
+	// RawJSON is the source SKZ Material's verbatim pasted/uploaded JSON,
+	// copied through unchanged - forwarded to StrömungsRaum as "Temporary
+	// Material Data" on submission (see pkg/simod.MaterialRequest.Temporary).
+	RawJSON string `json:"rawJson,omitempty"`
 }
 
 // SourceMaterialRef records which SKZ Material this submission's data was

@@ -1,7 +1,7 @@
 apiVersion: apis.kcp.io/v1alpha1
 kind: APIResourceSchema
 metadata:
-  name: v261103-644c8ff.materials.skz.platform-mesh.io
+  name: v261105-83eb0e2.materials.skz.platform-mesh.io
 spec:
   group: skz.platform-mesh.io
   names:
@@ -222,6 +222,14 @@ spec:
               - b9
               - model
               type: object
+            rawJson:
+              description: |-
+                RawJSON is the exact material characterization JSON the user
+                pasted/uploaded, verbatim - preserved alongside the parsed fields above
+                so it can be forwarded as-is to StrömungsRaum's "Temporary Material
+                Data" field on submission (see apis/materials/v1alpha1's
+                MaterialSubmissionData.RawJSON and pkg/simod.MaterialRequest.Temporary).
+              type: string
             shrinkage_properties:
               description: ShrinkageProperties are the material's shrinkage properties.
               properties:

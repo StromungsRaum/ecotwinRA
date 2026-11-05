@@ -310,6 +310,11 @@ type MaterialSections struct {
 type MaterialRequest struct {
 	Name     string           `json:"name"`
 	Sections MaterialSections `json:"sections"`
+
+	// Temporary is the source material's raw characterization JSON, stored
+	// server-side as StrömungsRaum's "Temporary Material Data" field
+	// (Material::$temporary) - sent as-is, not escaped as a string.
+	Temporary json.RawMessage `json:"temporary,omitempty"`
 }
 
 // MaterialResponse is the shape returned by the materials endpoints.

@@ -208,6 +208,7 @@ export class SkzComponent {
       return;
     }
     spec.name = name;
+    spec.rawJson = this.materialJson().trim();
 
     const crName = spec.name
       .toLowerCase()

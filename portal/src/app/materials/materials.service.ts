@@ -55,6 +55,7 @@ export interface SkzMaterialSpec {
   shrinkage_properties: Record<string, unknown>;
   max_shear_stress: number;
   max_shear_rate: number;
+  rawJson?: string;
 }
 
 export interface SkzMaterial {
@@ -110,6 +111,7 @@ const LIST_SKZ_MATERIALS_QUERY = `
             metadata { name namespace }
             spec {
               name
+              rawJson
               data { type norm material_number density heatconductivity heatcapacity }
               viscoModel { model exponent zero_viscosity critical_stress_level }
               heatModel { model thermaldata { temperature heatcapacity heatconductivity density } }
@@ -221,6 +223,7 @@ const CREATE_SUBMISSION_MUTATION = `
     $sourceName: String!
     $sourceNamespace: String!
     $materialName: String!
+    $rawJson: String
     $data: MaterialsPlatformMeshIoV1alpha1MaterialSubmissionSpecMaterialData_Input!
     $viscoModel: MaterialsPlatformMeshIoV1alpha1MaterialSubmissionSpecMaterialViscoModel_Input!
     $heatModel: MaterialsPlatformMeshIoV1alpha1MaterialSubmissionSpecMaterialHeatModel_Input!
@@ -250,6 +253,7 @@ const CREATE_SUBMISSION_MUTATION = `
               sourceMaterialRef: { name: $sourceName, namespace: $sourceNamespace }
               material: {
                 name: $materialName
+                rawJson: $rawJson
                 data: $data
                 viscoModel: $viscoModel
                 heatModel: $heatModel
@@ -368,6 +372,7 @@ export class MaterialsService {
         sourceName: source.metadata.name,
         sourceNamespace: source.metadata.namespace || NAMESPACE,
         materialName: materialName ?? spec.name,
+        rawJson: spec.rawJson,
         data: spec.data,
         viscoModel: spec.viscoModel,
         heatModel: spec.heatModel,
