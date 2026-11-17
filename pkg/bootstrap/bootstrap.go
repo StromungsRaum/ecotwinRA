@@ -289,6 +289,22 @@ func createResourceFromFS(ctx context.Context, client dynamic.Interface, mapper 
 	return utilerrors.NewAggregate(errs)
 }
 
+// mergeStringMaps returns existing overlaid with desired (desired wins), or
+// nil if both are empty.
+func mergeStringMaps(existing, desired map[string]string) map[string]string {
+	if len(existing) == 0 && len(desired) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(existing)+len(desired))
+	for k, v := range existing {
+		out[k] = v
+	}
+	for k, v := range desired {
+		out[k] = v
+	}
+	return out
+}
+
 func createResource(ctx context.Context, client dynamic.Interface, mapper meta.RESTMapper, raw []byte) error {
 	logger := klog.FromContext(ctx)
 
@@ -322,6 +338,12 @@ func createResource(ctx context.Context, client dynamic.Interface, mapper meta.R
 			}
 
 			u.SetResourceVersion(existing.GetResourceVersion())
+			// Carry over server-side metadata the manifest doesn't set. kcp
+			// stamps system-reserved annotations on live objects (e.g.
+			// internal.kcp.io/replicate on APIExport-bind ClusterRoles and
+			// their bindings) and rejects any update that drops them.
+			u.SetAnnotations(mergeStringMaps(existing.GetAnnotations(), u.GetAnnotations()))
+			u.SetLabels(mergeStringMaps(existing.GetLabels(), u.GetLabels()))
 			if _, err = client.Resource(m.Resource).Namespace(u.GetNamespace()).Update(ctx, u, metav1.UpdateOptions{}); err != nil {
 				return fmt.Errorf("failed to update %s %s: %w", gvk.Kind, u.GetName(), err)
 			}
