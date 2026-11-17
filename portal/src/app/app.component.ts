@@ -1,4 +1,4 @@
-import { Component } from "@angular/core";
+import { Component, HostListener, signal } from "@angular/core";
 import { InjectionMoldingComponent } from "./injection-molding/injection-molding.component";
 import { SkzComponent } from "./skz/skz.component";
 import { MaterialsComponent } from "./materials/materials.component";
@@ -10,14 +10,24 @@ import { MaterialsComponent } from "./materials/materials.component";
 // prefix was used (the base already "consumes" the whole prefix), so page
 // selection can't go through Router path matching. Pick the component
 // directly from the actual browser path instead.
+//
+// The path has to be re-read on every Luigi navigation, not just at startup:
+// all three pages are served from the same origin, and Luigi reuses the
+// existing iframe when the next node's viewUrl has the same origin as the
+// current one. Instead of loading the new URL it sends the micro frontend a
+// "luigi.navigate" message, on which LuigiClient does
+// history.replaceState(viewUrl) and dispatches a "popstate" event - i.e. it
+// expects the app to route client-side. Without the popstate listener below,
+// clicking from one provider's nav entry to another's kept showing the first
+// page until a full reload.
 @Component({
   selector: "app-root",
   standalone: true,
   imports: [InjectionMoldingComponent, SkzComponent, MaterialsComponent],
   template: `
-    @if (isSkz) {
+    @if (page() === "skz") {
       <app-skz></app-skz>
-    } @else if (isMaterials) {
+    } @else if (page() === "materials") {
       <app-materials></app-materials>
     } @else {
       <app-injection-molding></app-injection-molding>
@@ -26,6 +36,23 @@ import { MaterialsComponent } from "./materials/materials.component";
   styles: ``,
 })
 export class AppComponent {
-  protected readonly isSkz = window.location.pathname.includes("/skz");
-  protected readonly isMaterials = window.location.pathname.includes("/materials");
+  protected readonly page = signal(currentPage());
+
+  @HostListener("window:popstate")
+  protected onLocationChange(): void {
+    this.page.set(currentPage());
+  }
+}
+
+type Page = "skz" | "materials" | "injection-molding";
+
+function currentPage(): Page {
+  const path = window.location.pathname;
+  if (path.includes("/skz")) {
+    return "skz";
+  }
+  if (path.includes("/materials")) {
+    return "materials";
+  }
+  return "injection-molding";
 }

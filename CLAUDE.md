@@ -153,7 +153,10 @@ rework for why Angular's Router doesn't fit this deployment's per-prefix relativ
 `includes("/materials")`, else injection-molding) - each page is deployed under its own Gateway path
 prefix (`/injection-molding`, `/skz`, `/materials`), so Angular's own Router would see zero remaining path
 segments regardless of which prefix loaded the page. Adding a fourth page means adding a fourth branch
-here, not a route. The materials page additionally queries the `skz` provider's `Material` CRD directly
+here, not a route. `AppComponent` re-reads the path on every `popstate`, and that listener is load-bearing:
+the three pages share one origin, so Luigi reuses the iframe when the user clicks from one provider's nav
+entry to another's and only tells LuigiClient to `history.replaceState` + dispatch `popstate` instead of
+loading the new URL. The materials page additionally queries the `skz` provider's `Material` CRD directly
 (cross-provider GraphQL query, not a cross-APIExport kcp permission claim - see
 `apis/materials/v1alpha1/materialsubmission_types.go`'s package doc) to let the user pick a source
 material to submit.
