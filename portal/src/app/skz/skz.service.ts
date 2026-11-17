@@ -1,26 +1,25 @@
 /**
- * SKZ Materials - GraphQL API Client
+ * Generic Materials Service - GraphQL API Client
  *
- * SKZ is a dummy/demo provider: no backend, no operator. HttpBin-style - the
- * portal's "+" button creates one Material card per material. Unlike the
- * provider's original name-only form with canned placeholder values, the CRD
- * now mirrors a real material characterization file 1:1
- * (docs/assets/EastmanPlastics1000.json, apis/skz/v1alpha1/material_types.go)
- * so the user pastes a JSON blob in that shape and it's sent through
- * unmodified (see skz.component.ts).
+ * (Internally still "skz" - only the API group, URL path and labels were
+ * renamed.) A dummy/demo provider: no backend, no operator. Its Materials are a
+ * static, provider-owned catalog - the same for every consumer. They are
+ * created once in the provider workspace by `make init-skz` (from
+ * config/catalog-skz/materials/*.json) and projected read-only into every
+ * consumer workspace through kcp cached resources (ClusterCachedResource +
+ * an APIExport with virtual storage, see pkg/bootstrap/bootstrap_skz.go).
+ *
+ * So this client only lists: consumers cannot create, change or delete a
+ * Material (the gateway may still advertise mutations for the Kind, but kcp
+ * rejects them). Material is cluster-scoped - there is no namespace.
+ *
+ * The CRD mirrors a real material characterization file 1:1
+ * (docs/assets/EastmanPlastics1000.json, apis/skz/v1alpha1/material_types.go).
  *
  * NOTE: the CRD Kind is "Material", not "MaterialParameters" - a Kind name
  * ending in "s" broke the Platform Mesh CRD Gateway's pluralization
  * (confirmed live: it generated no list/collection field at all, only a
- * singular `MaterialParameters(name, namespace)` getter). Renamed before
- * wiring this up for real.
- *
- * NOTE: nested structs do NOT get a flat `<GoTypeName>_Input` type - the
- * gateway names each nested input type after its full field PATH from the
- * Kind, e.g. `SkzPlatformMeshIoV1alpha1MaterialSpecData_Input` for
- * `spec.data`, not `MaterialData_Input` (confirmed via live `__schema`
- * introspection, 2026-11-04, after CreateMaterial failed with "Unknown
- * type" errors). See CREATE_MUTATION below for the real names.
+ * singular `MaterialParameters(name, namespace)` getter).
  */
 import { Injectable, inject } from '@angular/core';
 import { Observable, of, catchError, map } from 'rxjs';
@@ -122,13 +121,12 @@ export interface MaterialSpec {
 export interface Material {
   metadata: {
     name: string;
-    namespace?: string;
   };
   spec?: MaterialSpec;
 }
 
 interface MaterialListResponse {
-  skz_platform_mesh_io: {
+  genericmaterials_platform_mesh_io: {
     v1alpha1: {
       Materials: {
         items: Material[];
@@ -139,11 +137,11 @@ interface MaterialListResponse {
 
 const LIST_QUERY = `
   query ListMaterials {
-    skz_platform_mesh_io {
+    genericmaterials_platform_mesh_io {
       v1alpha1 {
         Materials {
           items {
-            metadata { name namespace }
+            metadata { name }
             spec {
               name
               data { type norm material_number density heatconductivity heatcapacity }
@@ -171,75 +169,6 @@ const LIST_QUERY = `
   }
 `;
 
-const CREATE_MUTATION = `
-  mutation CreateMaterial(
-    $name: String!
-    $materialName: String!
-    $rawJson: String
-    $data: SkzPlatformMeshIoV1alpha1MaterialSpecData_Input!
-    $viscoModel: SkzPlatformMeshIoV1alpha1MaterialSpecViscoModel_Input!
-    $heatModel: SkzPlatformMeshIoV1alpha1MaterialSpecHeatModel_Input!
-    $tempModel: SkzPlatformMeshIoV1alpha1MaterialSpecTempModel_Input!
-    $pvtmodel: SkzPlatformMeshIoV1alpha1MaterialSpecPvtmodel_Input!
-    $structure: String!
-    $minMeltTemp: Float!
-    $maxMeltTemp: Float!
-    $absMaxMeltTemp: Float!
-    $ejectTemp: Float!
-    $freezeTemp: Float!
-    $meltDensity: Float!
-    $solidDensity: Float!
-    $mechProperties: SkzPlatformMeshIoV1alpha1MaterialSpecMech_properties_Input!
-    $shrinkageProperties: SkzPlatformMeshIoV1alpha1MaterialSpecShrinkage_properties_Input!
-    $maxShearStress: Float!
-    $maxShearRate: Float!
-  ) {
-    skz_platform_mesh_io {
-      v1alpha1 {
-        createMaterial(
-          namespace: "default"
-          object: {
-            metadata: { name: $name }
-            spec: {
-              name: $materialName
-              rawJson: $rawJson
-              data: $data
-              viscoModel: $viscoModel
-              heatModel: $heatModel
-              tempModel: $tempModel
-              pvtmodel: $pvtmodel
-              structure: $structure
-              min_melt_temp: $minMeltTemp
-              max_melt_temp: $maxMeltTemp
-              abs_max_melt_temp: $absMaxMeltTemp
-              eject_temp: $ejectTemp
-              freeze_temp: $freezeTemp
-              melt_density: $meltDensity
-              solid_density: $solidDensity
-              mech_properties: $mechProperties
-              shrinkage_properties: $shrinkageProperties
-              max_shear_stress: $maxShearStress
-              max_shear_rate: $maxShearRate
-            }
-          }
-        ) {
-          metadata { name namespace }
-        }
-      }
-    }
-  }
-`;
-
-const DELETE_MUTATION = `
-  mutation DeleteMaterial($name: String!, $namespace: String!) {
-    skz_platform_mesh_io {
-      v1alpha1 {
-        deleteMaterial(name: $name, namespace: $namespace)
-      }
-    }
-  }
-`;
-
 @Injectable({ providedIn: 'root' })
 export class SkzService {
   private graphql = inject(GraphQLClientService);
@@ -247,55 +176,11 @@ export class SkzService {
   list(): Observable<Material[]> {
     return this.graphql.post(LIST_QUERY, {}).pipe(
       map((response: { data: MaterialListResponse }) => {
-        return response.data?.skz_platform_mesh_io?.v1alpha1?.Materials?.items || [];
+        return response.data?.genericmaterials_platform_mesh_io?.v1alpha1?.Materials?.items || [];
       }),
       catchError((error) => {
         console.error('Error fetching materials:', error);
         return of([]);
-      })
-    );
-  }
-
-  /** Creates a new material card from a fully parsed MaterialSpec (pasted JSON). */
-  create(crName: string, spec: MaterialSpec): Observable<boolean> {
-    return this.graphql
-      .post(CREATE_MUTATION, {
-        name: crName,
-        materialName: spec.name,
-        rawJson: spec.rawJson,
-        data: spec.data,
-        viscoModel: spec.viscoModel,
-        heatModel: spec.heatModel,
-        tempModel: spec.tempModel,
-        pvtmodel: spec.pvtmodel,
-        structure: spec.structure,
-        minMeltTemp: spec.min_melt_temp,
-        maxMeltTemp: spec.max_melt_temp,
-        absMaxMeltTemp: spec.abs_max_melt_temp,
-        ejectTemp: spec.eject_temp,
-        freezeTemp: spec.freeze_temp,
-        meltDensity: spec.melt_density,
-        solidDensity: spec.solid_density,
-        mechProperties: spec.mech_properties,
-        shrinkageProperties: spec.shrinkage_properties,
-        maxShearStress: spec.max_shear_stress,
-        maxShearRate: spec.max_shear_rate,
-      })
-      .pipe(
-        map((response: any) => !!response.data?.skz_platform_mesh_io?.v1alpha1?.createMaterial),
-        catchError((error) => {
-          console.error('Error creating material:', error);
-          return of(false);
-        })
-      );
-  }
-
-  delete(name: string, namespace: string): Observable<boolean> {
-    return this.graphql.post(DELETE_MUTATION, { name, namespace }).pipe(
-      map((response: any) => !!response.data?.skz_platform_mesh_io?.v1alpha1?.deleteMaterial),
-      catchError((error) => {
-        console.error('Error deleting material:', error);
-        return of(false);
       })
     );
   }

@@ -109,7 +109,7 @@ type ShrinkageProperties struct {
 
 // MaterialSpec defines the desired state of Material.
 //
-// SKZ is a dummy/demo provider: there is no real material-testing backend
+// This is a dummy/demo provider: there is no real material-testing backend
 // behind this CRD, no operator, and no status. Unlike the provider's
 // original flat Parameters map[string]string bag, this shape is a 1:1
 // mirror of a real material characterization file
@@ -191,6 +191,7 @@ type MaterialSpec struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name="Name",type=string,JSONPath=`.spec.name`
 // +kubebuilder:printcolumn:name="Type",type=string,JSONPath=`.spec.data.type`
 

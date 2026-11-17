@@ -1,0 +1,76 @@
+{
+    "name": "Demo Polymers PP 2000",
+    "data": {
+        "type": "PP",
+        "norm": "-",
+        "material_number": "-",
+        "density": 905.0,
+        "heatconductivity": 0.18,
+        "heatcapacity": 2.74
+    },
+    "viscoModel": {
+        "exponent": 0.275,
+        "zero_viscosity": 4.6e14,
+        "critical_stress_level": 24200.0,
+        "model": "cross"
+    },
+    "heatModel": {
+        "thermaldata": [
+            {
+                "temperature": 230,
+                "heatcapacity": 2.74,
+                "heatconductivity": 0.18,
+                "density": 905.0
+            }
+        ],
+        "model": "Tabulated"
+    },
+    "tempModel": {
+        "c1": 26.1,
+        "c2": 51.6,
+        "D3": 0,
+        "referenceTemperature": -10.0,
+        "model": "c1c2"
+    },
+    "pvtmodel": {
+        "model": "tait",
+        "b1s": 0.00115,
+        "b2s": 4.6e-7,
+        "b3s": 164000000.0,
+        "b4s": 0.0025,
+        "b1m": 0.00125,
+        "b2m": 9.6e-7,
+        "b3m": 92000000.0,
+        "b4m": 0.0049,
+        "b5": 409.15,
+        "b6": 1.5e-7,
+        "b7": 0.000088,
+        "b8": 0.095,
+        "b9": 2.3e-8
+    },
+    "structure": "semi-crystalline",
+    "min_melt_temp": 200,
+    "max_melt_temp": 260,
+    "abs_max_melt_temp": 280.0,
+    "eject_temp": 100.0,
+    "freeze_temp": 120.0,
+    "melt_density": 740.0,
+    "solid_density": 905.0,
+    "mech_properties": {
+        "E1": 1450000000.0,
+        "E2": 1400000000.0,
+        "E_avg": 1425000000.0,
+        "v12": 0.40,
+        "v23": 0.39,
+        "alpha_1": 9.5e-5,
+        "alpha_2": 9.8e-5,
+        "G12": 510000000.0
+    },
+    "shrinkage_properties": {
+        "parallel": 1.45,
+        "perpendicular": 1.60,
+        "avg_nominal": 1.5
+    },
+    "max_shear_stress": 0.25,
+    "max_shear_rate": 100000.0
+}

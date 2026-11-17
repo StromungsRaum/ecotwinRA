@@ -104,7 +104,7 @@ export interface MaterialSubmission {
 
 const LIST_SKZ_MATERIALS_QUERY = `
   query ListSkzMaterials {
-    skz_platform_mesh_io {
+    genericmaterials_platform_mesh_io {
       v1alpha1 {
         Materials {
           items {
@@ -300,7 +300,7 @@ export class MaterialsService {
 
   listSkzMaterials(): Observable<SkzMaterial[]> {
     return this.graphql.post(LIST_SKZ_MATERIALS_QUERY, {}).pipe(
-      map((response: any) => response.data?.skz_platform_mesh_io?.v1alpha1?.Materials?.items || []),
+      map((response: any) => response.data?.genericmaterials_platform_mesh_io?.v1alpha1?.Materials?.items || []),
       catchError((error) => {
         console.error('Error fetching SKZ materials:', error);
         return of([]);

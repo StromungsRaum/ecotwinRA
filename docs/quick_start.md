@@ -195,7 +195,7 @@ KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade --install materials-controller ./dep
 
 This provider submits a material characterized in the `skz` provider (step... well, SKZ isn't covered as
 its own registration step here since it predates this walkthrough — its CRD only needs an account
-workspace bound to `skz.platform-mesh.io`'s APIExport, no separate operator to deploy) to the real
+workspace bound to `genericmaterials.platform-mesh.io`'s APIExport (the "Generic Materials Service"), no separate operator to deploy) to the real
 StrömungsRaum backend — see [platform-mesh.md](./platform-mesh.md#ianus-simulation---materials-provider)
 for the full cross-provider data flow.
 

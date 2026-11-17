@@ -1,0 +1,11 @@
+# Ties the cached Materials to the APIExport that projects them into consumers.
+# Both references are immutable once set.
+apiVersion: cache.kcp.io/v1alpha1
+kind: ClusterCachedResourceEndpointSlice
+metadata:
+  name: materials
+spec:
+  clusterCachedResource:
+    name: materials
+  export:
+    name: genericmaterials.platform-mesh.io

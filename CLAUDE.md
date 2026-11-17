@@ -86,6 +86,23 @@ Each follows the same per-provider file set, keyed by a `<name>` (`injectionmold
   current list rather than trusting any doc's enumeration of it
 - optionally `portal/src/app/<name>/` (Angular page) if the provider needs a custom UI — see "Portal" below
 
+**`skz` is the odd one out, twice over.** First, the name: users and API consumers know it as the
+"Generic Materials Service" - API group and APIExport `genericmaterials.platform-mesh.io`, portal path
+`/generic-materials`. It began as a demo stand-in for the SKZ institute and only that outward-facing surface
+was renamed; the Go package (`apis/skz`), `config/*-skz` dirs, `cmd/skz-init`, `portal/src/app/skz` and the
+`make *-skz` targets deliberately keep the internal name `skz`. Second, it is a static, read-only catalog
+served through kcp cached resources. Its
+`Material`s are identical for every consumer, so consumers don't create them. `make init-skz`
+(`pkg/bootstrap/bootstrap_skz.go`) installs the (cluster-scoped) `Material` CRD into the *provider*
+workspace, creates one `Material` per `config/catalog-skz/materials/*.json` there (file name = object name;
+add a material by dropping in a JSON file and re-running `make init-skz`), and publishes them with a
+`ClusterCachedResource` + `ClusterCachedResourceEndpointSlice` (`config/catalog-skz/*.yaml`, needs kcp's
+`CacheAPIs` feature gate). The `genericmaterials.platform-mesh.io` APIExport serves `materials` with `storage.virtual`
+pointing at that endpoint slice - set by a mutator in `bootstrap_skz.go`, **not** in
+`config/kcp-skz/apiexport-*.yaml`, because apigen rewrites that file with `storage: {crd: {}}` (and prunes
+anything else in that directory) on every `make generate-skz`. Consumers therefore see the materials
+read-only and cluster-scoped; the portal's SKZ page only lists them.
+
 **Don't hand-write a new provider from scratch by pattern-matching this list alone** —
 [docs/creating-a-provider.md](docs/creating-a-provider.md) is the step-by-step, file-by-file walkthrough
 with templates and the gotchas (controller-gen's `allowDangerousTypes`, the kcp permission-claim dance,
@@ -137,11 +154,14 @@ calls against the Platform Mesh CRD Gateway (query pattern `{apiGroup}_{version}
 
 There is no router (removed deliberately - see the git history around the `InjectionMoldingService` CRD
 rework for why Angular's Router doesn't fit this deployment's per-prefix relative `<base href>`):
-`AppComponent` instead picks a component directly from `window.location.pathname` (`includes("/skz")`,
+`AppComponent` instead picks a component directly from `window.location.pathname` (`includes("/generic-materials")`,
 `includes("/materials")`, else injection-molding) - each page is deployed under its own Gateway path
-prefix (`/injection-molding`, `/skz`, `/materials`), so Angular's own Router would see zero remaining path
+prefix (`/injection-molding`, `/generic-materials`, `/materials`), so Angular's own Router would see zero remaining path
 segments regardless of which prefix loaded the page. Adding a fourth page means adding a fourth branch
-here, not a route. The materials page additionally queries the `skz` provider's `Material` CRD directly
+here, not a route. `AppComponent` re-reads the path on every `popstate`, and that listener is load-bearing:
+the three pages share one origin, so Luigi reuses the iframe when the user clicks from one provider's nav
+entry to another's and only tells LuigiClient to `history.replaceState` + dispatch `popstate` instead of
+loading the new URL. The materials page additionally queries the `skz` provider's `Material` CRD directly
 (cross-provider GraphQL query, not a cross-APIExport kcp permission claim - see
 `apis/materials/v1alpha1/materialsubmission_types.go`'s package doc) to let the user pick a source
 material to submit.

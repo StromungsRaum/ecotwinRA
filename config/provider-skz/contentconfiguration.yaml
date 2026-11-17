@@ -3,22 +3,22 @@ kind: ContentConfiguration
 metadata:
   labels:
     ui.platform-mesh.io/entity: core_platform-mesh_io_account
-    ui.platform-mesh.io/content-for: skz.platform-mesh.io
-  name: skz-ui
+    ui.platform-mesh.io/content-for: genericmaterials.platform-mesh.io
+  name: genericmaterials-ui
 spec:
   inlineConfiguration:
     content: |-
       {
-       "name": "skz",
+       "name": "genericmaterials",
        "luigiConfigFragment": {
          "data": {
            "nodes": [
              {
-               "pathSegment": "skz",
-               "label": "SKZ Materials",
+               "pathSegment": "generic-materials",
+               "label": "Generic Materials Service",
                "hideFromNav": false,
                "icon": "person-placeholder",
-               "url": "https://{context.organization}.pm.127-0-0-1.sslip.io:8443/skz/",
+               "url": "https://{context.organization}.pm.127-0-0-1.sslip.io:8443/generic-materials/",
                "entityType": "main.core_platform-mesh_io_account",
                "order": 910,
                "context": {
@@ -30,13 +30,13 @@ spec:
              {
                "locale": "",
                "textDictionary": {
-                 "skz": "SKZ Materials"
+                 "generic-materials": "Generic Materials Service"
                }
              },
              {
                "locale": "en",
                "textDictionary": {
-                 "skz": "SKZ Materials"
+                 "generic-materials": "Generic Materials Service"
                }
              }
            ]
