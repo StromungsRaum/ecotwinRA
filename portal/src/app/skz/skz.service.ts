@@ -1,7 +1,8 @@
 /**
- * SKZ Materials - GraphQL API Client
+ * Generic Materials Service - GraphQL API Client
  *
- * SKZ is a dummy/demo provider: no backend, no operator. Its Materials are a
+ * (Internally still "skz" - only the API group, URL path and labels were
+ * renamed.) A dummy/demo provider: no backend, no operator. Its Materials are a
  * static, provider-owned catalog - the same for every consumer. They are
  * created once in the provider workspace by `make init-skz` (from
  * config/catalog-skz/materials/*.json) and projected read-only into every
@@ -125,7 +126,7 @@ export interface Material {
 }
 
 interface MaterialListResponse {
-  skz_platform_mesh_io: {
+  genericmaterials_platform_mesh_io: {
     v1alpha1: {
       Materials: {
         items: Material[];
@@ -136,7 +137,7 @@ interface MaterialListResponse {
 
 const LIST_QUERY = `
   query ListMaterials {
-    skz_platform_mesh_io {
+    genericmaterials_platform_mesh_io {
       v1alpha1 {
         Materials {
           items {
@@ -175,7 +176,7 @@ export class SkzService {
   list(): Observable<Material[]> {
     return this.graphql.post(LIST_QUERY, {}).pipe(
       map((response: { data: MaterialListResponse }) => {
-        return response.data?.skz_platform_mesh_io?.v1alpha1?.Materials?.items || [];
+        return response.data?.genericmaterials_platform_mesh_io?.v1alpha1?.Materials?.items || [];
       }),
       catchError((error) => {
         console.error('Error fetching materials:', error);

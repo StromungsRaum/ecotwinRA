@@ -5,7 +5,7 @@
 <ui5-dynamic-page>
   <ui5-dynamic-page-title slot="titleArea">
     <ui5-title slot="heading" level="H3">IANUS Simulation - Materials</ui5-title>
-    <ui5-label slot="subheading">Browse StrömungsRaum's materials, submit new ones from SKZ</ui5-label>
+    <ui5-label slot="subheading">Browse StrömungsRaum's materials, submit new ones from the Generic Materials Service</ui5-label>
   </ui5-dynamic-page-title>
 
   <div class="materials-section">
@@ -65,7 +65,7 @@
     } @else if (submissions().length === 0) {
       <div class="empty-state">
         <ui5-title level="H5">No submissions yet</ui5-title>
-        <ui5-text>Click "Add" to submit a material characterized in SKZ.</ui5-text>
+        <ui5-text>Click "Add" to submit a material from the Generic Materials Service.</ui5-text>
       </div>
     } @else {
       <div class="submissions-grid">
@@ -75,7 +75,7 @@
               <ui5-title level="H5">{{ sub.spec?.material?.name }}</ui5-title>
               <ui5-button icon="decline" design="Transparent" tooltip="Delete" (click)="deleteSubmission(sub)"></ui5-button>
             </div>
-            <ui5-label>Source: {{ sub.spec?.sourceMaterialRef?.name }} (SKZ)</ui5-label>
+            <ui5-label>Source: {{ sub.spec?.sourceMaterialRef?.name }} (Generic Materials Service)</ui5-label>
 
             @if (sub.status?.phase === 'Failed') {
               <ui5-text class="error-text">{{ sub.status?.message }}</ui5-text>
@@ -105,9 +105,9 @@
 >
   <div class="dialog-content">
     <div class="form-field">
-      <ui5-label for="source-material" required>Choose an SKZ material</ui5-label>
+      <ui5-label for="source-material" required>Choose a material</ui5-label>
       @if (!skzMaterials().length) {
-        <ui5-text>No SKZ materials found - enable the SKZ Materials provider for this account first.</ui5-text>
+        <ui5-text>No materials found - enable the Generic Materials Service for this account first.</ui5-text>
       } @else {
         <ui5-select id="source-material" (change)="onSourcePick($event)">
           <ui5-option value="">Choose...</ui5-option>

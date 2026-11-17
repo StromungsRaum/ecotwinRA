@@ -8,4 +8,4 @@ spec:
   clusterCachedResource:
     name: materials
   export:
-    name: skz.platform-mesh.io
+    name: genericmaterials.platform-mesh.io

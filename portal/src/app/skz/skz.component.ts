@@ -1,7 +1,7 @@
 /**
- * SKZ Materials Page Component
+ * Generic Materials Service Page Component (internally still "skz")
  *
- * Read-only catalog: SKZ's Materials are static and identical for every
+ * Read-only catalog: the Materials are static and identical for every
  * consumer, pre-created in the provider workspace and served to each consumer
  * through kcp cached resources (see skz.service.ts). There is nothing to add,
  * upload or delete here, and no refresh/poll - nothing changes at runtime.

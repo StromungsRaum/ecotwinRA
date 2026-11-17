@@ -1,0 +1,14 @@
+apiVersion: apis.kcp.io/v1alpha2
+kind: APIExport
+metadata:
+  labels:
+    ui.platform-mesh.io/content-for: genericmaterials.platform-mesh.io
+  name: genericmaterials.platform-mesh.io
+spec:
+  resources:
+  - group: genericmaterials.platform-mesh.io
+    name: materials
+    schema: v261117-4ff7b80.materials.genericmaterials.platform-mesh.io
+    storage:
+      crd: {}
+status: {}

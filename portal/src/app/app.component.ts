@@ -4,7 +4,7 @@ import { SkzComponent } from "./skz/skz.component";
 import { MaterialsComponent } from "./materials/materials.component";
 
 // Each page is deployed under its own Gateway path prefix (/injection-molding,
-// /skz, /materials) with a relative <base href="./"> so assets resolve under
+// /generic-materials, /materials) with a relative <base href="./"> so assets resolve under
 // whichever prefix loaded the page (see src/index.html) - that also means
 // Angular's Router sees zero remaining path segments regardless of which
 // prefix was used (the base already "consumes" the whole prefix), so page
@@ -25,7 +25,7 @@ import { MaterialsComponent } from "./materials/materials.component";
   standalone: true,
   imports: [InjectionMoldingComponent, SkzComponent, MaterialsComponent],
   template: `
-    @if (page() === "skz") {
+    @if (page() === "generic-materials") {
       <app-skz></app-skz>
     } @else if (page() === "materials") {
       <app-materials></app-materials>
@@ -44,12 +44,13 @@ export class AppComponent {
   }
 }
 
-type Page = "skz" | "materials" | "injection-molding";
+type Page = "generic-materials" | "materials" | "injection-molding";
 
 function currentPage(): Page {
   const path = window.location.pathname;
-  if (path.includes("/skz")) {
-    return "skz";
+  // Checked before "/materials" on purpose, though neither contains the other.
+  if (path.includes("/generic-materials")) {
+    return "generic-materials";
   }
   if (path.includes("/materials")) {
     return "materials";

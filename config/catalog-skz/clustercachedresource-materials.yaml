@@ -1,5 +1,5 @@
 # Replicates every Material in the skz provider workspace into kcp's cache
-# server. The skz.platform-mesh.io APIExport serves them from there, read-only,
+# server. The genericmaterials.platform-mesh.io APIExport serves them from there, read-only,
 # to each consumer workspace (storage.virtual - see pkg/bootstrap/bootstrap_skz.go).
 # Requires kcp's CacheAPIs feature gate. The resource must be cluster-scoped.
 apiVersion: cache.kcp.io/v1alpha1
@@ -7,6 +7,6 @@ kind: ClusterCachedResource
 metadata:
   name: materials
 spec:
-  group: skz.platform-mesh.io
+  group: genericmaterials.platform-mesh.io
   version: v1alpha1
   resource: materials

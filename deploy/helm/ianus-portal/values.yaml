@@ -57,7 +57,7 @@ httpRoute:
       namespace: platform-mesh-system
   pathPrefixes:
     - /injection-molding
-    - /skz
+    - /generic-materials
     - /materials
   filters:
     - extensionRef:
