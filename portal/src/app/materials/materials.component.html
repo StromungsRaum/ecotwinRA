@@ -107,7 +107,7 @@
     <div class="form-field">
       <ui5-label for="source-material" required>Choose an SKZ material</ui5-label>
       @if (!skzMaterials().length) {
-        <ui5-text>No SKZ materials found - create one in the SKZ Materials provider first.</ui5-text>
+        <ui5-text>No SKZ materials found - enable the SKZ Materials provider for this account first.</ui5-text>
       } @else {
         <ui5-select id="source-material" (change)="onSourcePick($event)">
           <ui5-option value="">Choose...</ui5-option>

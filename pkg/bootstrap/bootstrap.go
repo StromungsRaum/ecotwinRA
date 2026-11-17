@@ -210,14 +210,19 @@ func createControllerKubeconfigSecret(ctx context.Context, client kubernetes.Int
 	return nil
 }
 
-func bootstrapFS(ctx context.Context, dynamicClient dynamic.Interface, mapper meta.RESTMapper, cache discovery.CachedDiscoveryInterface, fs embed.FS) error {
+// mutateFunc adjusts an object decoded from an embedded manifest before it is
+// applied. Used where a generated manifest can't carry a setting itself (it
+// would be overwritten on the next codegen run).
+type mutateFunc func(u *unstructured.Unstructured) error
+
+func bootstrapFS(ctx context.Context, dynamicClient dynamic.Interface, mapper meta.RESTMapper, cache discovery.CachedDiscoveryInterface, fs embed.FS, mutate ...mutateFunc) error {
 	logger := klog.FromContext(ctx)
 	var lastErr error
 	attempt := 0
 	err := wait.PollUntilContextCancel(ctx, time.Second, true, func(ctx context.Context) (bool, error) {
 		attempt++
 		logger.Info("bootstrap attempt", "attempt", attempt)
-		if err := createResourcesFromFS(ctx, dynamicClient, mapper, fs); err != nil {
+		if err := createResourcesFromFS(ctx, dynamicClient, mapper, fs, mutate...); err != nil {
 			logger.Info("failed to bootstrap resources, retrying", "attempt", attempt, "error", err)
 			lastErr = err
 			cache.Invalidate()
@@ -232,7 +237,7 @@ func bootstrapFS(ctx context.Context, dynamicClient dynamic.Interface, mapper me
 	return err
 }
 
-func createResourcesFromFS(ctx context.Context, client dynamic.Interface, mapper meta.RESTMapper, fs embed.FS) error {
+func createResourcesFromFS(ctx context.Context, client dynamic.Interface, mapper meta.RESTMapper, fs embed.FS, mutate ...mutateFunc) error {
 	logger := klog.FromContext(ctx)
 	files, err := fs.ReadDir(".")
 	if err != nil {
@@ -250,14 +255,14 @@ func createResourcesFromFS(ctx context.Context, client dynamic.Interface, mapper
 			continue
 		}
 		logger.Info("processing file", "filename", name)
-		if err := createResourceFromFS(ctx, client, mapper, name, fs); err != nil {
+		if err := createResourceFromFS(ctx, client, mapper, name, fs, mutate...); err != nil {
 			errs = append(errs, err)
 		}
 	}
 	return utilerrors.NewAggregate(errs)
 }
 
-func createResourceFromFS(ctx context.Context, client dynamic.Interface, mapper meta.RESTMapper, filename string, fs embed.FS) error {
+func createResourceFromFS(ctx context.Context, client dynamic.Interface, mapper meta.RESTMapper, filename string, fs embed.FS, mutate ...mutateFunc) error {
 	logger := klog.FromContext(ctx)
 	raw, err := fs.ReadFile(filename)
 	if err != nil {
@@ -282,7 +287,7 @@ func createResourceFromFS(ctx context.Context, client dynamic.Interface, mapper 
 			continue
 		}
 
-		if err := createResource(ctx, client, mapper, doc); err != nil {
+		if err := createResource(ctx, client, mapper, doc, mutate...); err != nil {
 			errs = append(errs, fmt.Errorf("failed to create resource from %s doc %d: %w", filename, i, err))
 		}
 	}
@@ -305,13 +310,22 @@ func mergeStringMaps(existing, desired map[string]string) map[string]string {
 	return out
 }
 
-func createResource(ctx context.Context, client dynamic.Interface, mapper meta.RESTMapper, raw []byte) error {
-	logger := klog.FromContext(ctx)
-
+func createResource(ctx context.Context, client dynamic.Interface, mapper meta.RESTMapper, raw []byte, mutate ...mutateFunc) error {
 	u := &unstructured.Unstructured{}
 	if err := yaml.Unmarshal(raw, &u.Object); err != nil {
 		return fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
+	for _, m := range mutate {
+		if err := m(u); err != nil {
+			return fmt.Errorf("failed to mutate %s %s: %w", u.GetKind(), u.GetName(), err)
+		}
+	}
+	return applyObject(ctx, client, mapper, u)
+}
+
+// applyObject creates u, or updates it if it already exists.
+func applyObject(ctx context.Context, client dynamic.Interface, mapper meta.RESTMapper, u *unstructured.Unstructured) error {
+	logger := klog.FromContext(ctx)
 
 	gvk := u.GroupVersionKind()
 	if gvk.Kind == "" {

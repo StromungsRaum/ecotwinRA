@@ -332,6 +332,17 @@ to submit that characterization to the real StrömungsRaum/SIMOD backend.
 See `apis/materials/v1alpha1/`, `apis/skz/v1alpha1/material_types.go`, `operator/materials/`,
 `pkg/simod/client.go`'s `Material*` types, and `portal/src/app/materials/`.
 
+The SKZ materials themselves are a static catalog, not something a user uploads: `make init-skz` creates
+one `Material` per `config/catalog-skz/materials/*.json` in the provider workspace and publishes them
+read-only to every consumer through kcp cached resources (`ClusterCachedResource`, requires the `CacheAPIs`
+feature gate on kcp). Run it against the workspace that hosts the `skz.platform-mesh.io` APIExport:
+
+```bash
+KUBECONFIG=$PM_KUBECONFIG make init-skz
+KUBECONFIG=$PM_KUBECONFIG kubectl get clustercachedresource materials -o jsonpath='{.status.resourceCounts}'
+# {"cache":3,"local":3} once replicated; consumers then see them with `kubectl get materials.skz.platform-mesh.io`
+```
+
 Steps mirror the `ianus`/`ianus-injection-molding` walkthroughs above, with its own workspace and binaries:
 
 ```bash

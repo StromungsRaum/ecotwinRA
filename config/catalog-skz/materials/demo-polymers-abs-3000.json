@@ -1,0 +1,76 @@
+{
+    "name": "Demo Polymers ABS 3000",
+    "data": {
+        "type": "ABS",
+        "norm": "-",
+        "material_number": "-",
+        "density": 1045.0,
+        "heatconductivity": 0.17,
+        "heatcapacity": 2.05
+    },
+    "viscoModel": {
+        "exponent": 0.29,
+        "zero_viscosity": 2.1e11,
+        "critical_stress_level": 65000.0,
+        "model": "cross"
+    },
+    "heatModel": {
+        "thermaldata": [
+            {
+                "temperature": 240,
+                "heatcapacity": 2.05,
+                "heatconductivity": 0.17,
+                "density": 1045.0
+            }
+        ],
+        "model": "Tabulated"
+    },
+    "tempModel": {
+        "c1": 27.3,
+        "c2": 51.6,
+        "D3": 0,
+        "referenceTemperature": 100.0,
+        "model": "c1c2"
+    },
+    "pvtmodel": {
+        "model": "tait",
+        "b1s": 0.00097,
+        "b2s": 3.1e-7,
+        "b3s": 245000000.0,
+        "b4s": 0.0041,
+        "b1m": 0.00098,
+        "b2m": 6.2e-7,
+        "b3m": 178000000.0,
+        "b4m": 0.0046,
+        "b5": 373.15,
+        "b6": 2.2e-7,
+        "b7": 0,
+        "b8": 0,
+        "b9": 0
+    },
+    "structure": "amorphous",
+    "min_melt_temp": 220,
+    "max_melt_temp": 260,
+    "abs_max_melt_temp": 280.0,
+    "eject_temp": 85.0,
+    "freeze_temp": 95.0,
+    "melt_density": 950.0,
+    "solid_density": 1045.0,
+    "mech_properties": {
+        "E1": 2300000000.0,
+        "E2": 2250000000.0,
+        "E_avg": 2275000000.0,
+        "v12": 0.39,
+        "v23": 0.38,
+        "alpha_1": 8.5e-5,
+        "alpha_2": 8.7e-5,
+        "G12": 820000000.0
+    },
+    "shrinkage_properties": {
+        "parallel": 0.50,
+        "perpendicular": 0.55,
+        "avg_nominal": 0.52
+    },
+    "max_shear_stress": 0.30,
+    "max_shear_rate": 50000.0
+}

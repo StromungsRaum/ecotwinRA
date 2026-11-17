@@ -1,7 +1,7 @@
 apiVersion: apis.kcp.io/v1alpha1
 kind: APIResourceSchema
 metadata:
-  name: v261105-83eb0e2.materials.skz.platform-mesh.io
+  name: v261117-3c4b17b.materials.skz.platform-mesh.io
 spec:
   group: skz.platform-mesh.io
   names:
@@ -9,7 +9,7 @@ spec:
     listKind: MaterialList
     plural: materials
     singular: material
-  scope: Namespaced
+  scope: Cluster
   versions:
   - additionalPrinterColumns:
     - jsonPath: .spec.name

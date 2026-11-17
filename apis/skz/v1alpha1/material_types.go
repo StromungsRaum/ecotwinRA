@@ -191,6 +191,7 @@ type MaterialSpec struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name="Name",type=string,JSONPath=`.spec.name`
 // +kubebuilder:printcolumn:name="Type",type=string,JSONPath=`.spec.data.type`
 

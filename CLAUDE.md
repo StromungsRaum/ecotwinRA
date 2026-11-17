@@ -86,6 +86,18 @@ Each follows the same per-provider file set, keyed by a `<name>` (`injectionmold
   current list rather than trusting any doc's enumeration of it
 - optionally `portal/src/app/<name>/` (Angular page) if the provider needs a custom UI — see "Portal" below
 
+**`skz` is the odd one out: a static, read-only catalog served through kcp cached resources.** Its
+`Material`s are identical for every consumer, so consumers don't create them. `make init-skz`
+(`pkg/bootstrap/bootstrap_skz.go`) installs the (cluster-scoped) `Material` CRD into the *provider*
+workspace, creates one `Material` per `config/catalog-skz/materials/*.json` there (file name = object name;
+add a material by dropping in a JSON file and re-running `make init-skz`), and publishes them with a
+`ClusterCachedResource` + `ClusterCachedResourceEndpointSlice` (`config/catalog-skz/*.yaml`, needs kcp's
+`CacheAPIs` feature gate). The `skz.platform-mesh.io` APIExport serves `materials` with `storage.virtual`
+pointing at that endpoint slice - set by a mutator in `bootstrap_skz.go`, **not** in
+`config/kcp-skz/apiexport-*.yaml`, because apigen rewrites that file with `storage: {crd: {}}` (and prunes
+anything else in that directory) on every `make generate-skz`. Consumers therefore see the materials
+read-only and cluster-scoped; the portal's SKZ page only lists them.
+
 **Don't hand-write a new provider from scratch by pattern-matching this list alone** —
 [docs/creating-a-provider.md](docs/creating-a-provider.md) is the step-by-step, file-by-file walkthrough
 with templates and the gotchas (controller-gen's `allowDangerousTypes`, the kcp permission-claim dance,
