@@ -187,7 +187,7 @@ npm install
    ```javascript
    export default {
      '/api': {
-       target: 'https://bob.portal.localhost:8443',
+       target: 'https://bob.pm.127-0-0-1.sslip.io:8443',
        secure: false,
        changeOrigin: true
      }

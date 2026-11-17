@@ -100,9 +100,9 @@ You need the admin kubeconfig to create and manage provider workspaces:
 
 ```bash
 cd ~/repo/ecotwinRA
-cp ~/repos/ecotwin/helm-charts/.secret/kcp/admin.kubeconfig kcp-admin.kubeconfig
+cp ~/repos/ecotwin/platform-mesh/platform-mesh-kcp.kubeconfig kcp-admin.kubeconfig
 export PM_KUBECONFIG="$(realpath kcp-admin.kubeconfig)"
-kind export kubeconfig --name platform-mesh --kubeconfig compute.kubeconfig
+cp ~/repos/ecotwin/platform-meshplatform-mesh.kubeconfig compute.kubeconfig
 export COMPUTE_KUBECONFIG="$(realpath compute.kubeconfig)"
 ```
 
@@ -141,6 +141,8 @@ KUBECONFIG=$PM_KUBECONFIG kubectl get secret ianus-controller-kubeconfig -n defa
 ### 5. Run the Operator Locally (optional)
 
 For local development, run the operator directly:
+
+TODO: Kubeconfig needs updating for reachable API endpoint.
 
 ```bash
 KUBECONFIG=./operator.kubeconfig go run ./cmd/ianus --endpointslice=ianus.platform-mesh.io
@@ -221,6 +223,8 @@ KUBECONFIG=$PM_KUBECONFIG make init-injectionmolding HOST_OVERRIDE=https://front
 KUBECONFIG=$PM_KUBECONFIG kubectl get secret injectionmolding-controller-kubeconfig -n default -o jsonpath='{.data.kubeconfig}' | base64 -d > injectionmolding.kubeconfig
 
 # 4. Run locally (optional)
+TODO: Ensure that the `injectionmolding.kubeconfig` points to a reachable API endpoint for local development.
+
 KUBECONFIG=./injectionmolding.kubeconfig go run ./cmd/injectionmolding --endpointslice=injectionmolding.platform-mesh.io --simod-base-url=https://backend.dev.simod.de
 
 # 5. Build and load the image
@@ -376,8 +380,8 @@ Assuming your provider workspace is `ianus` under the `providers` tree:
 View your provider's marketplace entry (combines APIExport + ProviderMetadata):
 
 ```bash
-kubectl --server="https://localhost:8443/services/marketplace/clusters/root:providers:ianus" get marketplaceentries -A
-kubectl --server="https://localhost:8443/services/marketplace/clusters/root:providers:ianus" get marketplaceentries -A -o yaml
+kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/marketplace/clusters/root:providers:ianus" get marketplaceentries -A
+kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/marketplace/clusters/root:providers:ianus" get marketplaceentries -A -o yaml
 ```
 
 ### Check Content Configurations
@@ -385,9 +389,9 @@ kubectl --server="https://localhost:8443/services/marketplace/clusters/root:prov
 View available API resources and content configurations:
 
 ```bash
-kubectl --server="https://localhost:8443/services/contentconfigurations/clusters/root:providers:ianus" api-resources
-kubectl --server="https://localhost:8443/services/contentconfigurations/clusters/root:providers:ianus" get contentconfigurations -A
-kubectl --server="https://localhost:8443/services/contentconfigurations/clusters/root:providers:ianus" get contentconfigurations -A -o yaml
+kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/contentconfigurations/clusters/root:providers:ianus" api-resources
+kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/contentconfigurations/clusters/root:providers:ianus" get contentconfigurations -A
+kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/contentconfigurations/clusters/root:providers:ianus" get contentconfigurations -A -o yaml
 ```
 
 ### URL Pattern

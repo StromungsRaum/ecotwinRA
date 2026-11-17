@@ -18,7 +18,7 @@ spec:
                "label": "SKZ Materials",
                "hideFromNav": false,
                "icon": "person-placeholder",
-               "url": "https://{context.organization}.portal.localhost:8443/skz/",
+               "url": "https://{context.organization}.pm.127-0-0-1.sslip.io:8443/skz/",
                "entityType": "main.core_platform-mesh_io_account",
                "order": 910,
                "context": {

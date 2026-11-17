@@ -48,8 +48,8 @@ httpRoute:
   enabled: false
   namespace: platform-mesh-system
   hostnames:
-    - portal.localhost
-    - "*.portal.localhost"
+    - pm.127-0-0-1.sslip.io
+    - "*.pm.127-0-0-1.sslip.io"
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
@@ -75,8 +75,8 @@ middleware:
   corsOrigins:
     - http://localhost:4200
     - http://*.localhost:4200
-    - https://portal.localhost:8443
-    - https://*.portal.localhost:8443
+    - https://pm.127-0-0-1.sslip.io:8443
+    - https://*.pm.127-0-0-1.sslip.io:8443
 
 resources:
   limits:

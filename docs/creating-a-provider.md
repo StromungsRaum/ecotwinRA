@@ -128,7 +128,7 @@ Verify: `go build ./...` and `go vet ./...` should both pass with zero other cha
 | `bootstrap.go` | `//go:embed contentconfiguration.yaml providermetadata.yaml rbac.yaml`, package `provider<name>` |
 | `kustomization.yaml` | Lists the three YAML files — not actually applied via kustomize anywhere in this repo (`config/` is embed.FS, not kustomize - see CLAUDE.md), kept mostly for IDE/tooling discovery |
 | `providermetadata.yaml` | `ProviderMetadata`: `displayName`, `description`, `contacts`, `preferredSupportChannels`, `icon.{light,dark}.data` (base64 data URIs — **don't hand-type these**, splice an existing provider's icon bytes in with a shell command so you never load the giant base64 blob into an editor/chat context, e.g. `sed -n '/^  icon:/,$p' config/provider-injectionmolding/providermetadata.yaml \| tail -n +2 >> your-new-file.yaml`) |
-| `contentconfiguration.yaml` | `ContentConfiguration` with `ui.platform-mesh.io/content-for: <name>.platform-mesh.io` label — the inline `luigiConfigFragment` JSON picks the nav `pathSegment`, `label`, `order`, and the portal page URL (`https://{context.organization}.portal.localhost:8443/<name>/`) |
+| `contentconfiguration.yaml` | `ContentConfiguration` with `ui.platform-mesh.io/content-for: <name>.platform-mesh.io` label — the inline `luigiConfigFragment` JSON picks the nav `pathSegment`, `label`, `order`, and the portal page URL (`https://{context.organization}.pm.127-0-0-1.sslip.io:8443/<name>/`) |
 | `rbac.yaml` | A `ClusterRole` granting `bind` on your `APIExport` (`resourceNames: ["<name>.platform-mesh.io"]`) + a `ClusterRoleBinding` to `system:anonymous` — this is what lets *any* consumer workspace bind your APIExport, matching every existing provider here |
 
 ## 6. Controller identity — `config/controller-<name>/` **(operator only)**
@@ -278,7 +278,7 @@ KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade --install <name>-controller ./deploy
 Verify the marketplace entry actually exists before trusting anything in the portal:
 
 ```shell
-kubectl --server="https://localhost:8443/services/marketplace/clusters/root:providers:<workspace-name>" get marketplaceentries -A
+kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/marketplace/clusters/root:providers:<workspace-name>" get marketplaceentries -A
 KUBECONFIG=$COMPUTE_KUBECONFIG kubectl get pods -n provider-<name>
 ```
 

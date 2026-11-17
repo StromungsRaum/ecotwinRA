@@ -87,8 +87,8 @@ platform-mesh && task local-setup -- --iterate=false`.
 
 Once it completes:
 
-- Portal: <https://portal.localhost:8443>
-- kcp API: <https://localhost:8443>
+- Portal: <https://pm.127-0-0-1.sslip.io:8443>
+- kcp API: <https://kcp.api.pm.127-0-0-1.sslip.io:8443>
 - Admin kubeconfig: `~/repo/helm-charts/.secret/kcp/admin.kubeconfig`
 
 ## 3. Set up the admin + compute kubeconfigs
@@ -203,16 +203,16 @@ for the full cross-provider data flow.
 
 ```shell
 # Marketplace entries (APIExport + ProviderMetadata) for each provider
-kubectl --server="https://localhost:8443/services/marketplace/clusters/root:providers:ianus" get marketplaceentries -A
-kubectl --server="https://localhost:8443/services/marketplace/clusters/root:providers:ianus-injection-molding" get marketplaceentries -A
-kubectl --server="https://localhost:8443/services/marketplace/clusters/root:providers:ianus-materials" get marketplaceentries -A
+kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/marketplace/clusters/root:providers:ianus" get marketplaceentries -A
+kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/marketplace/clusters/root:providers:ianus-injection-molding" get marketplaceentries -A
+kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/marketplace/clusters/root:providers:ianus-materials" get marketplaceentries -A
 
 KUBECONFIG=$COMPUTE_KUBECONFIG kubectl get pods -n provider-models
 KUBECONFIG=$COMPUTE_KUBECONFIG kubectl get pods -n provider-injection-molding
 KUBECONFIG=$COMPUTE_KUBECONFIG kubectl get pods -n provider-materials
 ```
 
-Open <https://portal.localhost:8443>, log in, and the `ianus`, injection-molding, and materials
+Open <https://pm.127-0-0-1.sslip.io:8443>, log in, and the `ianus`, injection-molding, and materials
 provider UIs should appear once an account workspace binds their APIExports.
 
 ## 8. Run the StrömungsRaum frontend and backend locally
@@ -252,7 +252,7 @@ Set connection details to simod backend by creating a **simod-credentials** secr
 
 ```shell
 export KUBECONFIG=$PM_PLATFORM
-kubectl --server https://kcp.api.portal.localhost:8443/clusters/root:orgs:<org-name>:<org-user> create secret generic simod-credentials  -from-literal=email='<simod-email>' --from-literal=password='<simod-password>' -n default --insecure-skip-tls-verify
+kubectl --server https://kcp.api.pm.127-0-0-1.sslip.io:8443/clusters/root:orgs:<org-name>:<org-user> create secret generic simod-credentials  -from-literal=email='<simod-email>' --from-literal=password='<simod-password>' -n default --insecure-skip-tls-verify
 ```
 
 where <org-name>, <org-user>, <simod-email> and <simod-password> need to be replaced with adequate values. 
