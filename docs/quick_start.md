@@ -1,8 +1,8 @@
 # Quick Start: Platform Mesh + IANUS providers from scratch
 
-End-to-end steps to stand up a local Platform Mesh (kcp + portal) and register this repo's two
-providers (`ianus` and `ianus-injection-molding`) on a brand-new Linux (amd64) machine with
-nothing installed. Mirrors what's actually running on this dev machine. See
+End-to-end steps to stand up a local Platform Mesh (kcp + portal) and register this repo's three
+providers (`ianus-injection-molding`, `ianus-materials`, `skz`) on a brand-new Linux
+(amd64) machine with nothing installed. Mirrors what's actually running on this dev machine. See
 [platform-mesh.md](./platform-mesh.md) for the per-provider deep dive this quick start summarizes.
 
 ## 0. Prerequisites
@@ -65,68 +65,85 @@ Open a fresh shell (or `source ~/.bashrc`) so `PATH` updates apply before contin
 
 ## 1. Clone the repos
 
+What's actually on this machine is the `platform-mesh/platform-mesh` monorepo (not the older
+`platform-mesh/helm-charts` + `task local-setup` flow some docs elsewhere describe) — it ships its
+own `pmctl` bootstrapper:
+
 ```shell
 mkdir -p ~/repo && cd ~/repo
 git clone https://github.com/StromungsRaum/ecotwinRA.git
-git clone https://github.com/platform-mesh/helm-charts.git
+git clone https://github.com/platform-mesh/platform-mesh.git
 ```
 
 ## 2. Bootstrap Platform Mesh (kind cluster + kcp + portal)
 
 ```shell
-cd ~/repo/helm-charts
-task local-setup
+cd ~/repo/platform-mesh
+go run ./cmd/pmctl quickstart --dev
 ```
 
 This creates the `platform-mesh` kind cluster, generates mkcert certs, and installs kcp,
-Flux-managed core infra, Keycloak/OpenFGA, the portal, and the GraphQL CRD gateway. First run
-takes a while (pulls/builds a lot of charts); default timeout is 1200s per readiness check
-(`KUBECTL_WAIT_TIMEOUT` env var to raise it). Re-running `task local-setup` reuses the existing
-cluster (`--iterate=true` default) — for a clean rebuild: `kind delete cluster --name
-platform-mesh && task local-setup -- --iterate=false`.
+Flux-managed core infra, Keycloak/OpenFGA, the portal, and the GraphQL CRD gateway via Flux
+`HelmRelease`s. First run takes a while. **Known flaky bit**: Flux's `helm-controller` has, more
+than once on this machine, silently stopped processing its reconcile queue mid-run (no crash, no
+restart, just zero log output) while `HelmRelease`s like `infra`/`marketplace` sit `False` with
+errors like `no matches for kind "CacheServer"` (a CRD another `HelmRelease` hasn't finished
+installing yet). If reconciliation looks stuck for minutes with no log activity, it's the
+controller, not a real ordering bug — `kubectl -n platform-mesh-system rollout restart
+deploy/helm-controller` and give it another minute or two; repeat if needed.
 
 Once it completes:
 
 - Portal: <https://pm.127-0-0-1.sslip.io:8443>
 - kcp API: <https://kcp.api.pm.127-0-0-1.sslip.io:8443>
-- Admin kubeconfig: `~/repo/helm-charts/.secret/kcp/admin.kubeconfig`
+- Admin kubeconfig: pulled live from the cluster (see step 3) rather than a checked-out file path.
 
 ## 3. Set up the admin + compute kubeconfigs
 
+The admin kubeconfig isn't a static repo file — Platform Mesh writes a ready-made cluster-admin
+kcp kubeconfig into a `kubeconfig-kcp-admin` Secret in `platform-mesh-system` on every install.
+Pulling it fresh from there (rather than reusing an old copy) avoids chasing a stale `server:`
+host after a cluster rebuild — kcp's own `kubectl ws create`/`kubectl ws use` fail with a generic
+`404 NotFound` against a stale kubeconfig, not a DNS error, because `*.localhost`/`*.sslip.io`
+addresses always resolve to *something* on loopback:
+
 ```shell
 cd ~/repo/ecotwinRA
-cp ~/repo/helm-charts/.secret/kcp/admin.kubeconfig kcp-admin.kubeconfig
+kubectl -n platform-mesh-system get secret kubeconfig-kcp-admin -o jsonpath='{.data.kubeconfig}' \
+  | base64 -d > kcp-admin.kubeconfig
 export PM_KUBECONFIG="$(realpath kcp-admin.kubeconfig)"
 kind export kubeconfig --name platform-mesh --kubeconfig compute.kubeconfig
 export COMPUTE_KUBECONFIG="$(realpath compute.kubeconfig)"
 ```
 
-## 4. Register the `ianus` provider
+**kcp workspace-navigation gotcha**: the `kubectl-kcp` plugin keeps its "current workspace"
+pointer in a special `workspace.kcp.io/current` cluster entry inside `$PM_KUBECONFIG` itself, and
+on recent plugin versions bare `kubectl ws` (no args) means "go to my home workspace" (`cd`
+semantics), not "print current" — use `kubectl ws .` for that. Running bare `kubectl ws` by habit
+mid-script silently re-roots every following `kubectl ws use :`/`create --enter --ignore-existing`
+call under your personal `user:<name>` home workspace instead of `root`, so `make init` ends up
+creating a stray, duplicate provider workspace+APIExport+RBAC tree there instead of under
+`root:providers:<name>`. Before trusting a `kubectl ws create ... --enter` chain (especially
+inside a script), confirm with `KUBECONFIG=$PM_KUBECONFIG kubectl ws .` that you're actually under
+`root:providers:...`, not a `<random-id>:providers:...` home-workspace path. If it did go sideways,
+delete the stray workspace tree (`kubectl --server=".../clusters/<home-id>:providers" delete
+workspace <name>`) and repoint the plugin's state directly rather than fighting `ws use :`:
+```shell
+KUBECONFIG=$PM_KUBECONFIG kubectl config set-cluster "workspace.kcp.io/current" \
+  --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/clusters/root:providers:<name>"
+```
+
+## 3b. Deploy the portal
+
+The portal (`ianus-portal`) is one shared deployment serving all three providers' panels
+(injection-molding, materials, generic-materials) - it doesn't belong to any single provider, so it
+deploys once, independently of the per-provider registration steps below:
 
 ```shell
-# 4a. Provider workspace
-KUBECONFIG=$PM_KUBECONFIG kubectl ws use :
-KUBECONFIG=$PM_KUBECONFIG kubectl ws create providers --type=root:providers --enter --ignore-existing
-KUBECONFIG=$PM_KUBECONFIG kubectl ws create ianus --type=root:provider --enter --ignore-existing
-
-# 4b. Bootstrap (APIExport/APIResourceSchema, ProviderMetadata, ContentConfiguration, controller RBAC)
-KUBECONFIG=$PM_KUBECONFIG make init HOST_OVERRIDE=https://frontproxy-front-proxy.platform-mesh-system:8443
-
-# 4c. Extract the operator kubeconfig the init step generated
-KUBECONFIG=$PM_KUBECONFIG kubectl get secret ianus-controller-kubeconfig -n default -o jsonpath='{.data.kubeconfig}' | base64 -d > operator.kubeconfig
-
-# 4d. Build + load the controller and portal images into kind
 export IMAGE_TAG=platform-mesh
-make images kind-load-all IMAGE_TAG=$IMAGE_TAG
+make portal-image-build kind-load-portal IMAGE_TAG=$IMAGE_TAG
 
-# 4e. Deploy
 KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create namespace provider-models
-KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create secret generic ianus-controller-kubeconfig \
-  --from-file=kubeconfig=./operator.kubeconfig -n provider-models
-
-KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade --install ianus-controller ./deploy/helm/ianus-controller \
-  --namespace provider-models --set image.tag=$IMAGE_TAG --set image.pullPolicy=IfNotPresent \
-  --set common.defaults.hostAliases.enabled=true
 
 KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade --install ianus-portal ./deploy/helm/ianus-portal \
   --namespace provider-models --set image.tag=$IMAGE_TAG --set image.pullPolicy=IfNotPresent \
@@ -135,10 +152,10 @@ KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade --install ianus-portal ./deploy/helm
 
 ## 5. Register the `ianus-injection-molding` provider
 
-Sibling provider, own workspace, own binaries/chart — same pattern:
+Own workspace, own binaries/chart:
 
 ```shell
-# 5a. Provider workspace (sibling of `ianus`, not nested under it)
+# 5a. Provider workspace
 KUBECONFIG=$PM_KUBECONFIG kubectl ws use :
 KUBECONFIG=$PM_KUBECONFIG kubectl ws create providers --type=root:providers --enter --ignore-existing
 KUBECONFIG=$PM_KUBECONFIG kubectl ws create ianus-injection-molding --type=root:provider --enter --ignore-existing
@@ -157,8 +174,18 @@ KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create namespace provider-injection-moldi
 KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create secret generic injectionmolding-controller-kubeconfig \
   --from-file=kubeconfig=./injectionmolding.kubeconfig -n provider-injection-molding
 
+# root.kcp.pm.127-0-0-1.sslip.io also self-resolves to 127.0.0.1 inside a pod (sslip.io's own
+# mechanism) - without this hostAlias the controller can never watch any consumer workspace at
+# all (silent: no error visible outside its own logs, every refresh/create just hangs). See 7a.
+# devBackend.enabled bakes in the matching fix for backend.dev.simod.de itself (DNS + the
+# self-signed cert) - baked into the chart, not a live-only workaround; see 7a for both.
+TRAEFIK_IP=$(KUBECONFIG=$COMPUTE_KUBECONFIG kubectl get svc platform-mesh-prerequisites-traefik \
+  -n platform-mesh-system -o jsonpath='{.spec.clusterIP}')
 KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade --install injectionmolding-controller ./deploy/helm/injectionmolding-controller \
-  --namespace provider-injection-molding --set image.tag=$IMAGE_TAG --set image.pullPolicy=IfNotPresent
+  --namespace provider-injection-molding --set image.tag=$IMAGE_TAG --set image.pullPolicy=IfNotPresent \
+  --set hostAliases.enabled=true --set hostAliases.entries[0].ip=$TRAEFIK_IP \
+  --set hostAliases.entries[0].hostnames[0]=root.kcp.pm.127-0-0-1.sslip.io \
+  --set devBackend.enabled=true
 ```
 
 `--simod-base-url` (default `https://backend.dev.simod.de`, chart value `controller.simodBaseURL`)
@@ -170,7 +197,7 @@ Third sibling provider — two CRDs (`MaterialCatalog`, `MaterialSubmission`) in
 otherwise:
 
 ```shell
-# 6a. Provider workspace (sibling of `ianus` and `ianus-injection-molding`)
+# 6a. Provider workspace (sibling of `ianus-injection-molding`)
 KUBECONFIG=$PM_KUBECONFIG kubectl ws use :
 KUBECONFIG=$PM_KUBECONFIG kubectl ws create providers --type=root:providers --enter --ignore-existing
 KUBECONFIG=$PM_KUBECONFIG kubectl ws create ianus-materials --type=root:provider --enter --ignore-existing
@@ -189,31 +216,157 @@ KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create namespace provider-materials
 KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create secret generic materials-controller-kubeconfig \
   --from-file=kubeconfig=./materials.kubeconfig -n provider-materials
 
+# Same root.kcp.pm.127-0-0-1.sslip.io hostAlias as step 5e, plus devBackend.enabled - see 7a.
+TRAEFIK_IP=$(KUBECONFIG=$COMPUTE_KUBECONFIG kubectl get svc platform-mesh-prerequisites-traefik \
+  -n platform-mesh-system -o jsonpath='{.spec.clusterIP}')
 KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade --install materials-controller ./deploy/helm/materials-controller \
-  --namespace provider-materials --set image.tag=$IMAGE_TAG --set image.pullPolicy=IfNotPresent
+  --namespace provider-materials --set image.tag=$IMAGE_TAG --set image.pullPolicy=IfNotPresent \
+  --set hostAliases.enabled=true --set hostAliases.entries[0].ip=$TRAEFIK_IP \
+  --set hostAliases.entries[0].hostnames[0]=root.kcp.pm.127-0-0-1.sslip.io \
+  --set devBackend.enabled=true
 ```
 
-This provider submits a material characterized in the `skz` provider (step... well, SKZ isn't covered as
-its own registration step here since it predates this walkthrough — its CRD only needs an account
-workspace bound to `genericmaterials.platform-mesh.io`'s APIExport (the "Generic Materials Service"), no separate operator to deploy) to the real
-StrömungsRaum backend — see [platform-mesh.md](./platform-mesh.md#ianus-simulation---materials-provider)
-for the full cross-provider data flow.
+**`devBackend` gotcha**: `devBackend.enabled` (both charts) bakes in the dev-SIMOD-backend DNS
+hostAlias and a committed CA bundle (`files/dev-ca-bundle.crt` - this image's own base trust store
+plus `backend.dev.simod.de`'s self-signed cert, captured once) that replaces
+`/etc/ssl/certs/ca-certificates.crt` wholesale — no live, not-in-chart ConfigMap to pre-create
+anymore. Defaults to `false`: leave it off if you're only registering the provider and not yet
+talking to the real SIMOD backend, or if you're pointing `simod-credentials`' `baseUrl` at
+int/prod instead (those run elsewhere, with real DNS and real CA-signed certs — pods reach them
+over standard cluster DNS, no override needed, and `devBackend` should stay off).
+
+This provider submits a material characterized in the `skz` provider to the real StrömungsRaum
+backend — see [platform-mesh.md](./platform-mesh.md#ianus-simulation---materials-provider) for the
+full cross-provider data flow.
+
+## 6b. Register the `skz` ("Generic Materials Service") provider
+
+Bootstrap-only — no operator, no image, no chart (see [CLAUDE.md](../CLAUDE.md)'s "`skz` is the
+odd one out" section). Still needs its own workspace + `make init-skz` to publish the static
+`Material` catalog and the `genericmaterials.platform-mesh.io` APIExport, so run this too on a
+fresh cluster:
+
+```shell
+KUBECONFIG=$PM_KUBECONFIG kubectl ws use :
+KUBECONFIG=$PM_KUBECONFIG kubectl ws create providers --type=root:providers --enter --ignore-existing
+KUBECONFIG=$PM_KUBECONFIG kubectl ws create skz --type=root:provider --enter --ignore-existing
+
+KUBECONFIG=$PM_KUBECONFIG make init-skz HOST_OVERRIDE=https://frontproxy-front-proxy.platform-mesh-system:8443
+```
 
 ## 7. Verify
 
 ```shell
-# Marketplace entries (APIExport + ProviderMetadata) for each provider
-kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/marketplace/clusters/root:providers:ianus" get marketplaceentries -A
-kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/marketplace/clusters/root:providers:ianus-injection-molding" get marketplaceentries -A
-kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/marketplace/clusters/root:providers:ianus-materials" get marketplaceentries -A
+# Marketplace entries (APIExport + ProviderMetadata) for each provider - the list is global
+# (same result from any provider's cluster path), one entry expected per provider:
+# injectionmolding.platform-mesh.io, materials.platform-mesh.io, genericmaterials.platform-mesh.io (skz)
+KUBECONFIG=$PM_KUBECONFIG kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/marketplace/clusters/root:providers:ianus-injection-molding" get marketplaceentries -A
 
 KUBECONFIG=$COMPUTE_KUBECONFIG kubectl get pods -n provider-models
 KUBECONFIG=$COMPUTE_KUBECONFIG kubectl get pods -n provider-injection-molding
 KUBECONFIG=$COMPUTE_KUBECONFIG kubectl get pods -n provider-materials
 ```
 
-Open <https://pm.127-0-0-1.sslip.io:8443>, log in, and the `ianus`, injection-molding, and materials
-provider UIs should appear once an account workspace binds their APIExports.
+Open <https://pm.127-0-0-1.sslip.io:8443>, log in, and the injection-molding, materials,
+and generic-materials provider UIs should appear once an account workspace binds their
+APIExports.
+
+## 7a. Troubleshooting
+
+**Provider shows up in the marketplace, but enabling it just spins on the loading dots
+forever.** This has happened more than once on this machine, always from the same cause: the
+injection-molding / materials / generic-materials panels aren't generic-list-view webcomponents -
+they're Luigi iframes pointing at a per-org wildcard subdomain
+(`https://{org}.pm.127-0-0-1.sslip.io:8443/injection-molding/` etc., see
+`config/provider-injectionmolding/contentconfiguration.yaml`'s `url` field), all served by the one
+`ianus-portal` deployment. That only works if its `HTTPRoute` + Traefik `Middleware` (CORS) +
+cross-namespace `ReferenceGrant` exist - and they're **disabled by default** in
+`deploy/helm/ianus-portal/values.yaml` (`httpRoute.enabled: false`, `middleware.enabled: false`).
+If you deploy/upgrade `ianus-portal` without explicitly re-enabling them (easy to do if you copy
+just the `image.tag`/`pullPolicy` bit of the step 3b command and drop the rest), the iframe has no
+route into the cluster at all, the Luigi handshake with it never completes, and the panel spins
+forever - with nothing useful in any pod's logs, because the request never reaches a pod.
+
+Check: `KUBECONFIG=$COMPUTE_KUBECONFIG kubectl get httproute,middleware -n platform-mesh-system |
+grep ianus-portal` - if empty, redeploy with the full step 3b command:
+```shell
+KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade --install ianus-portal ./deploy/helm/ianus-portal \
+  --namespace provider-models --set image.tag=$IMAGE_TAG --set image.pullPolicy=IfNotPresent \
+  --set httpRoute.enabled=true --set middleware.enabled=true --set common.defaults.hostAliases.enabled=true
+```
+Verify directly (bypasses needing a portal login): `curl -sk -o /dev/null -w '%{http_code}\n'
+"https://<org>.pm.127-0-0-1.sslip.io:8443/injection-molding/"` should be `200`, not a connection
+error/timeout.
+
+Before chasing this, it's worth ruling out the *other* thing that can make panels misbehave on a
+freshly-registered cluster: the `kubernetes-graphql-gateway`'s client to kcp runs at client-go's
+bare defaults (QPS=5, Burst=10, see `--kubernetes-qps`/`--kubernetes-burst` in that service's
+`options.go`) unless its `HelmRelease` sets `gateway.extraArgs` higher. Under load from several
+providers + the marketplace list at once this shows up as `ERROR Unable to list objects ...
+"client rate limiter Wait returned an error: context canceled"` in the gateway's logs - a real
+bug, but a *different* one (intermittent list failures, not a permanently-dead route), and on its
+own it did not explain a panel that never loads at all.
+
+**Running a command against the wrong cluster (`$PM_KUBECONFIG` vs. `$COMPUTE_KUBECONFIG`).**
+The two kubeconfigs set up in step 3 point at different API surfaces, and mixing them up produces
+confusing not-found/wrong-type errors rather than an obvious "wrong cluster" message:
+
+- `$PM_KUBECONFIG` talks to kcp's front-proxy (`kcp.api.pm.127-0-0-1.sslip.io:8443`) - the **logical
+  control plane**: workspaces (`root:providers:*`, `root:orgs:*`), `APIExport`/`APIResourceSchema`,
+  `ProviderMetadata`, `ContentConfiguration`, the marketplace virtual workspace. kcp itself has no
+  kubelet/scheduler - it's API machinery only, no pods run here. Used for `kubectl ws ...`,
+  `make init-<name>`, checking marketplace entries/APIBindings.
+- `$COMPUTE_KUBECONFIG` (from `kind export kubeconfig --name platform-mesh`) is the kind cluster's own
+  native admin kubeconfig, no kcp layering - the **compute plane**: actual Deployments/Pods/Services/
+  Secrets/Namespaces (`provider-models`, `provider-injection-molding`, `provider-materials`,
+  `platform-mesh-system`), Gateway API `HTTPRoute`/`Middleware`/`ReferenceGrant`, Flux `HelmRelease`s.
+  Used for `helm upgrade --install`, creating controller-kubeconfig secrets, checking pod health.
+
+In this `pmctl quickstart --dev` setup both happen to be the *same* physical kind cluster, but each
+kubeconfig addresses it through a completely different API surface - that's why `kubectl get pods`
+against `$PM_KUBECONFIG` doesn't show the controller pods, and `kubectl get apiexport` against
+`$COMPUTE_KUBECONFIG` doesn't work at all. If a command gives a surprising "not found" or "no kind
+registered" error, check which `$...KUBECONFIG` it used before assuming the resource is actually
+missing.
+
+**Refresh/create on any provider silently does nothing - no error, no update, status never changes.**
+Confirmed live, 2026-11-18: the resource's `status` is *completely absent*, not even the initial empty
+one a fresh reconcile would set - meaning the operator never reconciled it at all. Check
+`injectionmolding-controller`'s/`materials-controller`'s logs for a repeating
+`error starting endpoint watcher ... dial tcp 127.0.0.1:8443: connect: connection refused` against
+`https://root.kcp.pm.127-0-0-1.sslip.io:8443/services/apiexport/...`. This looks like a routing gap but
+isn't one - `kubectl get gateway k8sapi-gateway -n platform-mesh-system -o yaml` already has a
+`passthrough-root` listener for exactly `root.kcp.pm.127-0-0-1.sslip.io`, backed by a `TLSRoute`
+(`kcp-root-shard-tlsroute` → `root-kcp:6443`), both `Accepted`/`ResolvedRefs: True`. The real cause is the
+same class of gotcha as the SIMOD backend DNS one below: every `*.pm.127-0-0-1.sslip.io` hostname
+resolves to `127.0.0.1` by sslip.io's own design, which *inside a pod's own network namespace* is the pod
+itself - nothing listens on 8443 there, hence "connection refused", regardless of how correctly Traefik's
+routing is configured. Fix: hostAlias that one hostname to Traefik's ClusterIP (not the kcp Service
+directly - the TLS routing above is SNI-based passthrough through Traefik itself) on both controllers:
+```shell
+TRAEFIK_IP=$(KUBECONFIG=$COMPUTE_KUBECONFIG kubectl get svc platform-mesh-prerequisites-traefik \
+  -n platform-mesh-system -o jsonpath='{.spec.clusterIP}')
+cat > /tmp/kcp-hostalias-override.yaml <<EOF
+hostAliases:
+  enabled: true
+  entries:
+    - ip: "$TRAEFIK_IP"
+      hostnames:
+        - "root.kcp.pm.127-0-0-1.sslip.io"
+EOF
+KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade injectionmolding-controller ./deploy/helm/injectionmolding-controller \
+  -n provider-injection-molding --reuse-values -f /tmp/kcp-hostalias-override.yaml
+KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade materials-controller ./deploy/helm/materials-controller \
+  -n provider-materials --reuse-values -f /tmp/kcp-hostalias-override.yaml
+```
+Not baked into the charts' checked-in values - the ClusterIP is allocated fresh per cluster install, so a
+hardcoded one would just go stale on the next `pmctl quickstart --dev` rebuild (same reason the `common`
+chart's own default `hostAliases` entry, `10.96.188.4` for `root.kcp.localhost`, is already wrong for this
+cluster - it's a `.localhost`-domain example left over from wherever the chart's defaults were authored,
+not this cluster's actual ClusterIP/domain). Verify: the endpoint-watcher error stops, and a refresh
+actually reaches `status` - confirm with `kubectl get <kind> -o yaml` directly on the resource; if it's
+still stuck on the old `backend.dev.simod.de` DNS gotcha next, that's a *different*, already-documented
+problem (see "Local-sandbox-only gotchas" below), not this one.
 
 ## 8. Run the StrömungsRaum frontend and backend locally
 
@@ -244,7 +397,6 @@ Point the `ecotwinRA` operators/CRDs at this local backend instead of `backend.d
 directly if you want an isolated loop:
 
 ```shell
-KUBECONFIG=./operator.kubeconfig go run ./cmd/ianus --endpointslice=ianus.platform-mesh.io --simod-base-url=https://backend.dev.simod.de
 KUBECONFIG=./injectionmolding.kubeconfig go run ./cmd/injectionmolding --endpointslice=injectionmolding.platform-mesh.io --simod-base-url=https://backend.dev.simod.de
 ```
 

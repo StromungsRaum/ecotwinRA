@@ -6,6 +6,17 @@
   <ui5-dynamic-page-title slot="titleArea">
     <ui5-title slot="heading" level="H3">IANUS Simulation - Materials</ui5-title>
     <ui5-label slot="subheading">Browse StrömungsRaum's materials, submit new ones from the Generic Materials Service</ui5-label>
+
+    <ui5-toolbar slot="actionsBar" design="Transparent">
+      @if (credentialsConfigured() === true) {
+        <ui5-label class="credentials-status">
+          <ui5-icon name="accept" class="credentials-ok-icon"></ui5-icon> SIMOD credentials configured
+        </ui5-label>
+      } @else if (credentialsConfigured() === false) {
+        <ui5-label class="credentials-status credentials-missing">SIMOD credentials not set</ui5-label>
+      }
+      <ui5-toolbar-button text="SIMOD Credentials" icon="key" (click)="openCredentialsDialog()"></ui5-toolbar-button>
+    </ui5-toolbar>
   </ui5-dynamic-page-title>
 
   <div class="materials-section">
@@ -19,7 +30,14 @@
     }
 
     @if (catalog()?.status?.phase === 'Failed') {
-      <ui5-text class="error-text">{{ catalog()?.status?.message }}</ui5-text>
+      @if (needsCredentialsFix(catalog()?.status?.message)) {
+        <ui5-text class="error-text">
+          {{ isMissingCredentials(catalog()?.status?.message) ? 'SIMOD credentials are missing.' : catalog()?.status?.message }}
+        </ui5-text>
+        <ui5-button design="Emphasized" (click)="openCredentialsDialog()">Set credentials</ui5-button>
+      } @else {
+        <ui5-text class="error-text">{{ catalog()?.status?.message }}</ui5-text>
+      }
     } @else if (!catalog()?.status?.availableMaterials?.length) {
       <ui5-text>No materials fetched yet - click Refresh.</ui5-text>
     } @else {
@@ -78,7 +96,14 @@
             <ui5-label>Source: {{ sub.spec?.sourceMaterialRef?.name }} (Generic Materials Service)</ui5-label>
 
             @if (sub.status?.phase === 'Failed') {
-              <ui5-text class="error-text">{{ sub.status?.message }}</ui5-text>
+              @if (needsCredentialsFix(sub.status?.message)) {
+                <ui5-text class="error-text">
+                  {{ isMissingCredentials(sub.status?.message) ? 'SIMOD credentials are missing.' : sub.status?.message }}
+                </ui5-text>
+                <ui5-button design="Emphasized" (click)="openCredentialsDialog()">Set credentials</ui5-button>
+              } @else {
+                <ui5-text class="error-text">{{ sub.status?.message }}</ui5-text>
+              }
             } @else if (sub.status?.phase === 'Ready') {
               <div class="submission-field">
                 <ui5-icon name="accept" class="complete-icon"></ui5-icon>
@@ -145,3 +170,8 @@
     <ui5-button design="Emphasized" (click)="confirmRename()">Save</ui5-button>
   </div>
 </ui5-dialog>
+
+<app-simod-credentials-dialog
+  [open]="credentialsDialogOpen()"
+  (closed)="onCredentialsDialogClosed($event)"
+></app-simod-credentials-dialog>

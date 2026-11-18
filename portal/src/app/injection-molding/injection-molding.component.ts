@@ -31,7 +31,10 @@ import '@ui5/webcomponents-icons/dist/refresh.js';
 import '@ui5/webcomponents-icons/dist/action.js';
 import '@ui5/webcomponents-icons/dist/accept.js';
 import '@ui5/webcomponents-icons/dist/decline.js';
+import '@ui5/webcomponents-icons/dist/key.js';
 
+import { SimodCredentialsDialogComponent } from '../shared/simod-credentials-dialog.component';
+import { SimodCredentialsService, isMissingCredentialsMessage, needsCredentialsFixMessage } from '../shared/simod-credentials.service';
 import { InjectionMoldingService, InjectionMoldingServiceClient } from './injection-molding.service';
 
 /** How often the portal re-fetches the list, to reflect the operator's own 5s poll. */
@@ -54,6 +57,7 @@ const LIST_POLL_INTERVAL_MS = 5000;
     DialogComponent,
     InputComponent,
     IconComponent,
+    SimodCredentialsDialogComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './injection-molding.component.html',
@@ -61,7 +65,10 @@ const LIST_POLL_INTERVAL_MS = 5000;
 })
 export class InjectionMoldingComponent implements OnDestroy {
   private client = inject(InjectionMoldingServiceClient);
+  private credentialsClient = inject(SimodCredentialsService);
   private pollHandle?: ReturnType<typeof setInterval>;
+  /** Avoids re-popping the dialog on every 5s poll once the user has seen it once this page visit. */
+  private credentialsPrompted = false;
 
   public services = signal<InjectionMoldingService[]>([]);
   public loading = signal<boolean>(true);
@@ -69,12 +76,18 @@ export class InjectionMoldingComponent implements OnDestroy {
   public newServiceName = signal<string>('');
   public pendingSelection = signal<Record<string, string>>({});
   public refreshingNames = signal<Set<string>>(new Set());
+  public credentialsDialogOpen = signal<boolean>(false);
+  /** null = not checked yet, so the badge doesn't flash "Not set" before the real answer arrives. */
+  public credentialsConfigured = signal<boolean | null>(null);
+  public readonly isMissingCredentials = isMissingCredentialsMessage;
+  public readonly needsCredentialsFix = needsCredentialsFixMessage;
 
   public ngOnInit(): void {
     LuigiClient.addInitListener(() => {
       LuigiClient.uxManager().showLoadingIndicator();
       this.load(() => LuigiClient.uxManager().hideLoadingIndicator());
       this.pollHandle = setInterval(() => this.load(), LIST_POLL_INTERVAL_MS);
+      this.checkCredentialsConfigured();
     });
   }
 
@@ -84,11 +97,42 @@ export class InjectionMoldingComponent implements OnDestroy {
     }
   }
 
+  private checkCredentialsConfigured(): void {
+    this.credentialsClient.hasCredentials().subscribe((configured) => this.credentialsConfigured.set(configured));
+  }
+
+  public openCredentialsDialog(): void {
+    this.credentialsDialogOpen.set(true);
+  }
+
+  public onCredentialsDialogClosed(saved: boolean): void {
+    this.credentialsDialogOpen.set(false);
+    if (saved) {
+      this.credentialsPrompted = false; // a fresh failure after this should prompt again
+      this.credentialsConfigured.set(true);
+      this.load();
+      // Test the new credentials right away instead of waiting for the
+      // operator's own 30s credentials-recheck interval: re-running Refresh
+      // on an existing card drives an immediate reconcile, which will set
+      // status.phase/message to whatever the real outcome is (Ready, or
+      // Failed with a backend-rejected or other message) - already rendered
+      // by the template once it lands.
+      const first = this.services()[0];
+      if (first) {
+        this.refresh(first);
+      }
+    }
+  }
+
   private load(onDone?: () => void): void {
     this.client.list().subscribe({
       next: (services) => {
         this.services.set(services);
         this.loading.set(false);
+        if (!this.credentialsPrompted && services.some((s) => needsCredentialsFixMessage(s.status?.message))) {
+          this.credentialsPrompted = true;
+          this.credentialsDialogOpen.set(true);
+        }
         onDone?.();
       },
       error: (err) => {

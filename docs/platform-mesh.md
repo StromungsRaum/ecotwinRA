@@ -1,6 +1,6 @@
-# Platform Mesh Provider for Ianus
+# Platform Mesh Providers
 
-A template for building the Platform Mesh IANUS provider. This repo demonstrates how to create a provider that exposes APIs through kcp and integrates with the Platform Mesh UI.
+A template for building Platform Mesh providers. This repo demonstrates how to create a provider that exposes APIs through kcp and integrates with the Platform Mesh UI.
 
 ## Start Platform Mesh locally
 
@@ -8,8 +8,8 @@ A template for building the Platform Mesh IANUS provider. This repo demonstrates
 
 ## What This Repo Does
 
-This is an instructions to make a "Ianus" provider that exposes a `Models` API (`ianus.platform-mesh.io`).
-It is based on [Platform Mesh - Provider Quickstart](https://github.com/platform-mesh/provider-quickstart).
+Each provider here exposes its own API (e.g. `materials.platform-mesh.io`) through kcp and registers
+with Platform Mesh. It is based on [Platform Mesh - Provider Quickstart](https://github.com/platform-mesh/provider-quickstart).
 
 Steps:
 
@@ -27,9 +27,9 @@ Registers your provider with Platform Mesh, including display name, description,
 apiVersion: ui.platform-mesh.io/v1alpha1
 kind: ProviderMetadata
 metadata:
-  name: ianus.platform-mesh.io  # Must match your APIExport name
+  name: materials.platform-mesh.io  # Must match your APIExport name
 spec:
-  displayName: IANUS Simulation Provider
+  displayName: IANUS Simulation - Materials Provider
   description: ...
   contacts: [...]
   icon: {...}
@@ -44,7 +44,7 @@ apiVersion: ui.platform-mesh.io/v1alpha1
 kind: ContentConfiguration
 metadata:
   labels:
-    ui.platform-mesh.io/content-for: ianus.platform-mesh.io  # Links to your APIExport
+    ui.platform-mesh.io/content-for: materials.platform-mesh.io  # Links to your APIExport
   name: models-ui
 spec:
   inlineConfiguration:
@@ -54,37 +54,35 @@ spec:
 
 The `ui.platform-mesh.io/content-for` label is critical - it associates your UI configuration with your APIExport.
 
-This repo's `config/provider/contentconfiguration.yaml` + `providermetadata.yaml` (inline-JSON `ContentConfiguration`, `ui.platform-mesh.io/v1alpha1`) already follow this pattern and are validated against current Platform Mesh convention — no migration needed here.
+This repo's `config/provider-<name>/contentconfiguration.yaml` + `providermetadata.yaml` (inline-JSON `ContentConfiguration`, `ui.platform-mesh.io/v1alpha1`) already follow this pattern and are validated against current Platform Mesh convention — no migration needed here.
 
 ## Project Structure
 
-This repo now hosts four providers (`ianus`, `ianus-injection-molding`, `skz`, `ianus-materials`), each
-following the same file layout keyed by a `<name>` (`injectionmolding`, `skz`, `materials`) — shown below
-for `ianus` (no suffix) with the repeated `-<name>` pattern underneath. See
-[creating-a-provider.md](./creating-a-provider.md) for the full file-by-file walkthrough of that pattern.
+This repo hosts three providers (`ianus-injection-molding`, `skz`, `ianus-materials`), each
+following the same file layout keyed by a `<name>` (`injectionmolding`, `skz`, `materials`). See
+[creating-a-provider.md](./creating-a-provider.md) for the full file-by-file walkthrough of that pattern,
+and [quick_start.md](./quick_start.md) for the actual end-to-end setup commands.
 
 ```
 ├── apis/
-│   ├── ianus/v1alpha1/              # Component, DigitalTwin, ExecutionParameter, Simulation CRDs
 │   ├── injectionmolding/v1alpha1/   # InjectionMoldingService CRD
 │   ├── skz/v1alpha1/                # Material CRD (dummy/demo provider)
 │   └── materials/v1alpha1/          # MaterialCatalog, MaterialSubmission CRDs
 ├── cmd/
-│   ├── init/, ianus/                 # Bootstrap CLI + operator (ianus)
 │   ├── injectionmolding-init/, injectionmolding/
 │   ├── skz-init/                     # skz has no operator - bootstrap only
 │   └── materials-init/, materials/
 ├── config/
-│   ├── kcp[-<name>]/                 # kcp resources (APIExport, APIResourceSchema)
-│   ├── provider[-<name>]/            # Provider resources (ProviderMetadata, ContentConfiguration, RBAC)
-│   └── controller[-<name>]/          # Controller identity/RBAC (not present for skz)
+│   ├── kcp-<name>/                   # kcp resources (APIExport, APIResourceSchema)
+│   ├── provider-<name>/              # Provider resources (ProviderMetadata, ContentConfiguration, RBAC)
+│   └── controller-<name>/            # Controller identity/RBAC (not present for skz)
 ├── operator/
-│   ├── ianus/, injectionmolding/, materials/   # Reconcilers (none for skz)
+│   ├── injectionmolding/, materials/   # Reconcilers (none for skz)
 ├── pkg/
 │   ├── bootstrap/                    # Bootstrap logic for applying resources (one func per provider)
 │   └── simod/                        # Shared SIMOD Platform API HTTP client
 ├── deploy/helm/
-│   ├── ianus-controller/, ianus-portal/
+│   ├── ianus-portal/                 # Shared Luigi portal deployment, serves all three providers' panels
 │   ├── injectionmolding-controller/
 │   └── materials-controller/         # skz has no chart - no operator to deploy
 └── portal/                           # Luigi microfrontend (Angular) - injection-molding, skz, materials pages
@@ -94,113 +92,17 @@ for `ianus` (no suffix) with the repeated `-<name>` pattern underneath. See
 
 > **Important:** Providers must live in a dedicated workspace type within a separate tree. This means platform administrators must configure providers using the **admin kubeconfig**. Regular user kubeconfigs will not have the necessary permissions to create provider workspaces. This is bound to change and improve in the future, but for now you must use the admin kubeconfig to set up your provider.
 
-### 1. Set Admin Kubeconfig
-
-You need the admin kubeconfig to create and manage provider workspaces:
-
-```bash
-cd ~/repo/ecotwinRA
-cp ~/repos/ecotwin/platform-mesh/platform-mesh-kcp.kubeconfig kcp-admin.kubeconfig
-export PM_KUBECONFIG="$(realpath kcp-admin.kubeconfig)"
-cp ~/repos/ecotwin/platform-meshplatform-mesh.kubeconfig compute.kubeconfig
-export COMPUTE_KUBECONFIG="$(realpath compute.kubeconfig)"
-```
-
-### 2. Create Provider Workspace Hierarchy
-
-Navigate to the root workspace and create the provider workspace structure:
-
-```bash
-# Navigate to root workspace and create provider workspace hierarchy
-KUBECONFIG=$PM_KUBECONFIG kubectl ws use :
-KUBECONFIG=$PM_KUBECONFIG kubectl ws create providers --type=root:providers --enter --ignore-existing
-KUBECONFIG=$PM_KUBECONFIG kubectl ws create ianus --type=root:provider --enter --ignore-existing
-```
-
-### 3. Bootstrap Provider Resources
-
-Build and run the bootstrap to register your provider:
-
-```bash
-KUBECONFIG=$PM_KUBECONFIG make init HOST_OVERRIDE=https://frontproxy-front-proxy.platform-mesh-system:8443
-```
-
-This applies all kcp and provider resources to register your provider and created dedicated 
-ServiceAccount and RBAC for the provider workspace.
-
-Once this is done, you should be able to access your provider's APIs through the kcp API and see it registered in the Platform Mesh UI.
-
-### 4. Extract Operator Kubeconfig
-
-Extract the kubeconfig for your provider workspace:
-
-```bash
-KUBECONFIG=$PM_KUBECONFIG kubectl get secret ianus-controller-kubeconfig -n default -o jsonpath='{.data.kubeconfig}' | base64 -d > operator.kubeconfig
-```
-
-### 5. Run the Operator Locally (optional)
-
-For local development, run the operator directly:
-
-TODO: Kubeconfig needs updating for reachable API endpoint.
-
-```bash
-KUBECONFIG=./operator.kubeconfig go run ./cmd/ianus --endpointslice=ianus.platform-mesh.io
-```
-
-### 6. Build and Load Images
-
-Build container images and load them into the kind cluster:
-
-```bash
-export IMAGE_TAG=platform-mesh
-make images kind-load-all IMAGE_TAG=$IMAGE_TAG
-```
-
-### 7. Deploy to Cluster
-
-Create the namespace and the kubeconfig secret for the operator:
-
-```bash
-KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create namespace provider-models
-KUBECONFIG=$COMPUTE_KUBECONFIG kubectl delete secret ianus-controller-kubeconfig -n provider-models --ignore-not-found
-KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create secret generic ianus-controller-kubeconfig \
-  --from-file=kubeconfig=./operator.kubeconfig -n provider-models
-```
-
-Deploy the controller:
-```bash
-KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade --install ianus-controller ./deploy/helm/ianus-controller \
-  --namespace provider-models \
-  --set image.tag=$IMAGE_TAG \
-  --set image.pullPolicy=IfNotPresent \
-  --set common.defaults.hostAliases.enabled=true
-```
-
-Deploy the portal microfrontend:
-
-```bash
-KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade --install ianus-portal ./deploy/helm/ianus-portal \
-  --namespace provider-models \
-  --set image.tag=$IMAGE_TAG \
-  --set image.pullPolicy=IfNotPresent \
-  --set httpRoute.enabled=true \
-  --set middleware.enabled=true \
-  --set common.defaults.hostAliases.enabled=true
-```
-
-To upgrade after rebuilding images:
-
-```bash
-make images kind-load-all IMAGE_TAG=$IMAGE_TAG
-KUBECONFIG=$COMPUTE_KUBECONFIG kubectl rollout restart deployment -n provider-models
-```
+See [quick_start.md](./quick_start.md) for the actual, up-to-date end-to-end commands (admin/compute
+kubeconfig setup, portal deployment, and each provider's registration steps) as run on this dev machine.
+The sections below describe each provider's own CRDs/operator/chart and how to register it; the shared
+mechanics (workspace creation, `make init-<name>`, image build/load, `helm upgrade --install`) are the
+same pattern for every provider.
 
 ## Injection Molding Service Provider
 
-A second, independent provider ("IANUS Simulation - Injection Molding Service",
-APIExport `injectionmolding.platform-mesh.io`) lives alongside `ianus` in this same repo -
-own workspace, own CRD (`InjectionMoldingService`), own operator binary/image/Helm chart. It
+The first provider in this repo ("IANUS Simulation - Injection Molding Service",
+APIExport `injectionmolding.platform-mesh.io`) - own workspace, own CRD (`InjectionMoldingService`),
+own operator binary/image/Helm chart. It
 doesn't create simulations itself: the operator logs into the real SIMOD backend, lists the
 account's existing Components/DigitalTwins/Simulations into `status`, and the portal shows a
 link to the SIMOD web UI (`https://<env>.simod.de/models3D`, derived from `--simod-base-url`)
@@ -208,10 +110,10 @@ for actually creating one. See `apis/injectionmolding/v1alpha1/`,
 `operator/injectionmolding/`, `pkg/simod/client.go`'s `List*` methods, and
 `portal/src/app/injection-molding/`.
 
-Steps mirror the `ianus` walkthrough above, with its own workspace and binaries:
+Steps, own workspace and binaries:
 
 ```bash
-# 1. Create the provider workspace (sibling of `ianus`, not nested under it)
+# 1. Create the provider workspace
 KUBECONFIG=$PM_KUBECONFIG kubectl ws use :
 KUBECONFIG=$PM_KUBECONFIG kubectl ws create providers --type=root:providers --enter --ignore-existing
 KUBECONFIG=$PM_KUBECONFIG kubectl ws create ianus-injection-molding --type=root:provider --enter --ignore-existing
@@ -231,7 +133,8 @@ KUBECONFIG=./injectionmolding.kubeconfig go run ./cmd/injectionmolding --endpoin
 export IMAGE_TAG=platform-mesh
 make image-build-injectionmolding kind-load-injectionmolding IMAGE_TAG=$IMAGE_TAG
 
-# 6. Deploy
+# 6. Deploy (devBackend.enabled only needed against this machine's local SIMOD backend - see
+# "Local-sandbox-only gotchas" below)
 KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create namespace provider-injection-molding
 KUBECONFIG=$COMPUTE_KUBECONFIG kubectl delete secret injectionmolding-controller-kubeconfig -n provider-injection-molding --ignore-not-found
 KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create secret generic injectionmolding-controller-kubeconfig \
@@ -240,7 +143,8 @@ KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create secret generic injectionmolding-co
 KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade --install injectionmolding-controller ./deploy/helm/injectionmolding-controller \
   --namespace provider-injection-molding \
   --set image.tag=$IMAGE_TAG \
-  --set image.pullPolicy=IfNotPresent
+  --set image.pullPolicy=IfNotPresent \
+  --set devBackend.enabled=true
 ```
 
 `--simod-base-url` (default `https://backend.dev.simod.de`, templated via the chart's
@@ -260,54 +164,39 @@ provider workspace itself.
 ### Local-sandbox-only gotchas (real dev/int/prod shouldn't hit these)
 
 Verified live against this repo's local kind cluster, talking to the real (self-signed,
-unmerged-branch) `backend.dev.simod.de`. None of this is baked into the chart, Dockerfile,
-or committed values - it's deploy-time-only and specific to a sandboxed agent environment
-that reaches `*.simod.de` through a local tunnel rather than real DNS/VPN routing. A real
-deployment with proper DNS and a CA-signed backend cert needs none of it.
+unmerged-branch) `backend.dev.simod.de`. A real deployment with proper DNS and a CA-signed
+backend cert needs none of this - int/prod are never run on this machine and reach their real
+DNS names/certs normally through standard cluster DNS.
 
-1. **DNS**: in this sandbox, `backend.dev.simod.de` resolves to `127.0.0.1` from *inside* the
-   kind cluster (a local-tunnel artifact), which is useless from a pod's own network
-   namespace - nothing listens on the pod's loopback. Found the tunnel's actual listener
-   reachable via the kind docker network's gateway IP instead (`docker network inspect kind`
-   -> `Gateway`), then overrode the chart's `hostAliases` value (the `common` chart's
-   `common.hostAliases` template, same mechanism `docs/platform-mesh.md`'s `ianus-controller`
-   install already uses for `root.kcp.localhost` -> the `traefik` ClusterIP) to also map
-   `backend.dev.simod.de` to that gateway IP, via a `-f overrides.yaml` passed to `helm
-   upgrade`, not a values.yaml change:
-   ```yaml
-   hostAliases:
-     enabled: true
-     entries:
-       - ip: "<traefik ClusterIP>"
-         hostnames: ["localhost", "portal.localhost", "kcp.localhost", "root.kcp.localhost"]
-       - ip: "<kind network gateway IP>"
-         hostnames: ["backend.dev.simod.de"]
-   ```
-2. **TLS trust, host-side**: `backend.dev.simod.de` serves a self-signed cert (confirmed via
-   `openssl s_client`/`curl -v`: subject == issuer). Trust it on a dev machine with:
+Both workarounds are now **baked into `injectionmolding-controller`'s and `materials-controller`'s
+charts** behind one flag, `--set devBackend.enabled=true` (default `false`, so a real deployment
+is unaffected):
+1. **DNS**: `backend.dev.simod.de` resolves to `127.0.0.1` from *inside* the kind cluster (a
+   local-tunnel artifact), useless from a pod's own network namespace - nothing listens on the
+   pod's loopback. `devBackend.enabled` adds a `hostAliases` entry mapping it to
+   `devBackend.hostAliasIP` (default `172.18.0.1`, kind's default docker network gateway -
+   override via `--set` if yours differs: `docker network inspect kind --format
+   '{{(index .IPAM.Config 0).Gateway}}'`).
+2. **TLS trust, in-container**: that backend serves a self-signed cert the operator's distroless
+   image's own CA set doesn't trust ("x509: certificate signed by unknown authority").
+   `devBackend.enabled` also mounts `files/dev-ca-bundle.crt` (committed in each chart - this
+   image's own base `ca-certificates.crt`, captured once via `docker cp`, plus
+   `backend.dev.simod.de`'s self-signed cert appended) over `/etc/ssl/certs`, replacing it
+   wholesale - no live, not-in-chart ConfigMap to pre-create anymore. If the backend's cert is
+   ever rotated, re-capture and re-commit both chart's `files/dev-ca-bundle.crt`:
    ```bash
    echo | openssl s_client -connect backend.dev.simod.de:443 -servername backend.dev.simod.de 2>/dev/null | openssl x509 > dev.simod.de.crt
-   sudo cp dev.simod.de.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates
-   ```
-3. **TLS trust, in-container**: trusting the cert on the host doesn't help the operator's
-   distroless container image, which ships its own CA bundle. Extract it, append the
-   self-signed cert, and mount the combined bundle over the image's default path via a
-   ConfigMap - again deploy-time only, not an image/chart change:
-   ```bash
-   cid=$(docker create ghcr.io/platform-mesh/injectionmolding-controller:$IMAGE_TAG)
+   cid=$(docker create ghcr.io/platform-mesh/materials-controller:$IMAGE_TAG)
    docker cp "$cid:/etc/ssl/certs/ca-certificates.crt" base-ca-bundle.crt && docker rm "$cid"
-   cat base-ca-bundle.crt dev.simod.de.crt > combined-ca-bundle.crt
-   kubectl create configmap injectionmolding-dev-ca-bundle --from-file=ca-certificates.crt=combined-ca-bundle.crt -n provider-injection-molding
-   kubectl patch deployment injectionmolding-controller -n provider-injection-molding --type=json -p '[
-     {"op":"add","path":"/spec/template/spec/volumes/-","value":{"name":"dev-ca-bundle","configMap":{"name":"injectionmolding-dev-ca-bundle"}}},
-     {"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-","value":{"name":"dev-ca-bundle","mountPath":"/etc/ssl/certs/ca-certificates.crt","subPath":"ca-certificates.crt","readOnly":true}}
-   ]'
+   cat base-ca-bundle.crt dev.simod.de.crt > deploy/helm/materials-controller/files/dev-ca-bundle.crt
+   cp deploy/helm/materials-controller/files/dev-ca-bundle.crt deploy/helm/injectionmolding-controller/files/dev-ca-bundle.crt
    ```
+   (Both charts' base images share the same pinned distroless digest, so one capture covers both.)
 
 ## IANUS Simulation - Materials Provider
 
-A third, independent provider ("IANUS Simulation - Materials", APIExport `materials.platform-mesh.io`)
-lives alongside `ianus` and `ianus-injection-molding` in this same repo - own workspace, own two CRDs
+A second, independent provider ("IANUS Simulation - Materials", APIExport `materials.platform-mesh.io`)
+lives alongside `ianus-injection-molding` in this same repo - own workspace, own two CRDs
 (`MaterialCatalog`, `MaterialSubmission`), own operator binary/image/Helm chart. It demonstrates the
 same multi-provider provisioning story the SKZ dummy provider's `ProviderMetadata` describes, carried
 through for real: a customer characterizes a material in the SKZ Materials provider (`apis/skz/v1alpha1`'s
@@ -347,10 +236,10 @@ KUBECONFIG=$PM_KUBECONFIG kubectl get clustercachedresource materials -o jsonpat
 # {"cache":3,"local":3} once replicated; consumers then see them with `kubectl get materials.genericmaterials.platform-mesh.io`
 ```
 
-Steps mirror the `ianus`/`ianus-injection-molding` walkthroughs above, with its own workspace and binaries:
+Steps mirror the `ianus-injection-molding` walkthrough above, with its own workspace and binaries:
 
 ```bash
-# 1. Create the provider workspace (sibling of `ianus` and `ianus-injection-molding`)
+# 1. Create the provider workspace (sibling of `ianus-injection-molding`)
 KUBECONFIG=$PM_KUBECONFIG kubectl ws use :
 KUBECONFIG=$PM_KUBECONFIG kubectl ws create providers --type=root:providers --enter --ignore-existing
 KUBECONFIG=$PM_KUBECONFIG kubectl ws create ianus-materials --type=root:provider --enter --ignore-existing
@@ -377,26 +266,27 @@ KUBECONFIG=$COMPUTE_KUBECONFIG kubectl create secret generic materials-controlle
 KUBECONFIG=$COMPUTE_KUBECONFIG helm upgrade --install materials-controller ./deploy/helm/materials-controller \
   --namespace provider-materials \
   --set image.tag=$IMAGE_TAG \
-  --set image.pullPolicy=IfNotPresent
+  --set image.pullPolicy=IfNotPresent \
+  --set devBackend.enabled=true
 ```
 
 Like injection molding, `--simod-base-url` (default `https://backend.dev.simod.de`, chart value
-`controller.simodBaseURL`) drives the materials API calls - bump it the same way as dev moves to int to
-prod. The CR's `spec.secretRefs` -> Secret (`email`/`password`) pattern, and the
-"Local-sandbox-only gotchas" DNS/TLS workarounds above, apply here identically if pointing at a local
-self-signed SIMOD backend instance.
+`controller.simodBaseURL`, also overridable per-account via the credentials Secret's `baseUrl` key -
+see `pkg/simod/auth.go`) drives the materials API calls - bump it the same way as dev moves to int to
+prod, and leave `devBackend.enabled` off once it does (see "Local-sandbox-only gotchas" above - those
+workarounds are specific to this machine's local dev SIMOD backend, not int/prod).
 
 ## Debugging
 
-Assuming your provider workspace is `ianus` under the `providers` tree:
+Assuming your provider workspace is `ianus-materials` under the `providers` tree:
 
 ### Check Marketplace Entries
 
 View your provider's marketplace entry (combines APIExport + ProviderMetadata):
 
 ```bash
-kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/marketplace/clusters/root:providers:ianus" get marketplaceentries -A
-kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/marketplace/clusters/root:providers:ianus" get marketplaceentries -A -o yaml
+kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/marketplace/clusters/root:providers:ianus-materials" get marketplaceentries -A
+kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/marketplace/clusters/root:providers:ianus-materials" get marketplaceentries -A -o yaml
 ```
 
 ### Check Content Configurations
@@ -404,9 +294,9 @@ kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/marketplac
 View available API resources and content configurations:
 
 ```bash
-kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/contentconfigurations/clusters/root:providers:ianus" api-resources
-kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/contentconfigurations/clusters/root:providers:ianus" get contentconfigurations -A
-kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/contentconfigurations/clusters/root:providers:ianus" get contentconfigurations -A -o yaml
+kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/contentconfigurations/clusters/root:providers:ianus-materials" api-resources
+kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/contentconfigurations/clusters/root:providers:ianus-materials" get contentconfigurations -A
+kubectl --server="https://kcp.api.pm.127-0-0-1.sslip.io:8443/services/contentconfigurations/clusters/root:providers:ianus-materials" get contentconfigurations -A -o yaml
 ```
 
 ### URL Pattern
@@ -419,7 +309,7 @@ https://<host>/services/<virtual-workspace>/clusters/root:providers:<provider-wo
 Where:
 - `marketplace` - Virtual workspace for marketplace entries
 - `contentconfigurations` - Virtual workspace for UI content configurations
-- `<provider-workspace>` - Your provider workspace name (e.g., `ianus`)
+- `<provider-workspace>` - Your provider workspace name (e.g., `ianus-materials`)
 
 ## Code Generation Tools
 
@@ -437,35 +327,34 @@ This project uses two key code generation tools:
 [apigen](https://github.com/kcp-dev/sdk) is a kcp-specific tool that:
 - Converts standard Kubernetes **CRDs into APIResourceSchemas** for kcp
 - APIResourceSchemas are kcp's way of defining API types that can be exported via `APIExport`
-- Takes CRDs from `config/crds/` and outputs APIResourceSchemas to `config/kcp/`
+- Takes CRDs from `config/crds-<name>/` and outputs APIResourceSchemas to `config/kcp-<name>/`
 
 **Generation flow:**
 ```
-Go types (apis/) → controller-gen → CRDs (config/crds/) → apigen → APIResourceSchemas (config/kcp/)
+Go types (apis/<name>/) → controller-gen → CRDs (config/crds-<name>/) → apigen → APIResourceSchemas (config/kcp-<name>/)
 ```
 
 ## Make Targets
 
-The targets below are the `ianus` provider's (no suffix). `injectionmolding`, `skz`, and `materials` each
-have the same targets suffixed `-injectionmolding`/`-skz`/`-materials` (e.g. `build-materials`,
-`init-materials`, `generate-materials` — `skz` only has `build-init-skz`/`init-skz`/`generate-skz`, no
-operator). **Run `make help` for the full, current list** — this table only covers the shared shape, not
-every target; it drifts from `Makefile` otherwise.
+Every provider (`injectionmolding`, `skz`, `materials`) has the same targets, suffixed `-<name>`
+(e.g. `build-materials`, `init-materials`, `generate-materials` — `skz` only has
+`build-init-skz`/`init-skz`/`generate-skz`, no operator). **Run `make help` for the full, current list**
+— this table only covers the shared shape, not every target; it drifts from `Makefile` otherwise.
 
 | Target | Description |
 |--------|-------------|
-| `make build` | Build all binaries (operator + init) |
-| `make build-operator` | Build the ianus operator binary |
-| `make build-init` | Build the init/bootstrap binary |
-| `make run` | Run the ianus operator locally |
-| `make init` | Bootstrap provider resources into workspace (requires KUBECONFIG, optional HOST_OVERRIDE) |
-| `make generate` | Generate code (deepcopy) and kcp resources |
-| `make manifests` | Generate CRD manifests from Go types |
-| `make apiresourceschemas` | Generate APIResourceSchemas from CRDs |
-| `make image-build` | Build controller container image |
-| `make portal-image-build` | Build portal container image |
+| `make build-materials` | Build both materials binaries (operator + init) |
+| `make build-operator-materials` | Build the materials operator binary |
+| `make build-init-materials` | Build the materials init/bootstrap binary |
+| `make run-materials` | Run the materials operator locally |
+| `make init-materials` | Bootstrap provider resources into workspace (requires KUBECONFIG, optional HOST_OVERRIDE) |
+| `make generate-materials` | Generate code (deepcopy) and kcp resources |
+| `make manifests-materials` | Generate CRD manifests from Go types |
+| `make apiresourceschemas-materials` | Generate APIResourceSchemas from CRDs |
+| `make image-build-materials` | Build controller container image |
+| `make portal-image-build` | Build the shared portal container image |
 | `make images` | Build all container images (all providers + portal) |
-| `make kind-load` | Load controller image into kind cluster |
+| `make kind-load-materials` | Load controller image into kind cluster |
 | `make kind-load-portal` | Load portal image into kind cluster |
 | `make kind-load-all` | Load all images into kind cluster (all providers + portal) |
 | `make tools` | Install all required tools (controller-gen, apigen) |
@@ -477,8 +366,8 @@ every target; it drifts from `Makefile` otherwise.
 ## Creating Your Own Provider
 
 1. Fork this repo
-2. Update the API group name (replace `ianus.platform-mesh.io`)
-3. Define your CRD schema in `config/kcp/`
+2. Update the API group name (replace `materials.platform-mesh.io`)
+3. Define your CRD schema in `config/kcp-<name>/`
 4. Update `ProviderMetadata` with your provider details
 5. Configure `ContentConfiguration` for your resource UI
 6. Update RBAC to allow binding to your APIExport

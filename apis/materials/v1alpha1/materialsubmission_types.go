@@ -28,7 +28,7 @@ import (
 // permission claim - see apis/skz/v1alpha1/material_types.go). Duplicated
 // here rather than imported across API groups, following this repo's
 // existing convention of a per-group copy (see SecretReference, separately
-// defined in ianus/injectionmolding/materials's own common_types.go).
+// defined in injectionmolding's and materials's own common_types.go).
 
 // MaterialData is the Material's general/physical data section.
 type MaterialData struct {

@@ -26,7 +26,17 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "injectionmolding-controller.serviceAccountName" . }}
-{{ include "common.hostAliases" $ | nindent 6 }}
+      {{- $aliases := list }}
+      {{- if .Values.hostAliases.enabled }}
+      {{- $aliases = concat $aliases .Values.hostAliases.entries }}
+      {{- end }}
+      {{- if .Values.devBackend.enabled }}
+      {{- $aliases = append $aliases (dict "ip" .Values.devBackend.hostAliasIP "hostnames" (list .Values.devBackend.hostname)) }}
+      {{- end }}
+      {{- if $aliases }}
+      hostAliases:
+        {{- toYaml $aliases | nindent 8 }}
+      {{- end }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -41,6 +51,10 @@ spec:
           env:
             - name: KUBECONFIG
               value: /etc/kcp/kubeconfig
+            {{- if .Values.devBackend.enabled }}
+            - name: SSL_CERT_FILE
+              value: /etc/ssl/certs/ca-certificates.crt
+            {{- end }}
           ports:
             - name: metrics
               containerPort: 9080
@@ -66,6 +80,11 @@ spec:
             - name: kubeconfig
               mountPath: /etc/kcp
               readOnly: true
+            {{- if .Values.devBackend.enabled }}
+            - name: dev-ca-bundle
+              mountPath: /etc/ssl/certs
+              readOnly: true
+            {{- end }}
       volumes:
         - name: kubeconfig
           secret:
@@ -73,6 +92,11 @@ spec:
             items:
               - key: {{ .Values.kubeconfig.secretKey }}
                 path: kubeconfig
+        {{- if .Values.devBackend.enabled }}
+        - name: dev-ca-bundle
+          configMap:
+            name: {{ include "injectionmolding-controller.fullname" . }}-dev-ca-bundle
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

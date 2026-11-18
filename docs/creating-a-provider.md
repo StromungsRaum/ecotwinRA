@@ -1,9 +1,9 @@
 # Creating a Provider by Hand
 
 Step-by-step, file-by-file walkthrough for adding a new Platform Mesh provider to this repo, generalized
-from how the `materials` provider was actually built (alongside the pre-existing `ianus`,
-`injectionmolding`, and `skz` providers). Each step says what the file does and why it exists, not just
-what to paste — read [CLAUDE.md](../CLAUDE.md)'s "Four providers, one repo" section first for the
+from how the `materials` provider was actually built (alongside the pre-existing `injectionmolding` and
+`skz` providers). Each step says what the file does and why it exists, not just
+what to paste — read [CLAUDE.md](../CLAUDE.md)'s "Three providers, one repo" section first for the
 one-paragraph version of this same pattern.
 
 Throughout, `<name>` is your provider's lowercase identifier used in package/binary/file names (e.g.
@@ -18,8 +18,9 @@ Changing these later means renaming across a dozen files, so settle them first:
 
 - **API group**: `<name>.platform-mesh.io` (e.g. `materials.platform-mesh.io`)
 - **Kind(s)**: PascalCase, plural-safe — **never end a Kind in `s`** (see step 1's gotcha)
-- **Provider workspace name**: usually `ianus-<name>` for a sibling of `ianus`, or bare `<name>` for an
-  unrelated provider like `skz` — this is a kcp workspace name, not a Go identifier, so it can have dashes
+- **Provider workspace name**: usually `ianus-<name>` for a sibling of `ianus-injection-molding`, or bare
+  `<name>` for an unrelated provider like `skz` — this is a kcp workspace name, not a Go identifier, so it
+  can have dashes
 - **Binary names**: `<name>` (operator) and `<name>-init` (bootstrap CLI)
 - **Namespace** the controller deploys into: `provider-<name>` (convention, not enforced)
 
@@ -31,7 +32,7 @@ The source of truth for your provider's API. Four files, copied from an existing
 |---|---|
 | `doc.go` | Package doc + `+groupName=<name>.platform-mesh.io` marker controller-gen reads to know the API group |
 | `groupversion_info.go` | `GroupVersion`, `SchemeBuilder`, `AddToScheme` — boilerplate, copy verbatim and change the group string |
-| `common_types.go` | Your own copy of `SecretReference` (one field, `Name string`) if the operator needs SIMOD credentials. **Don't import another provider's copy** — every provider duplicates this one tiny type instead of cross-importing API groups (confirmed convention: `ianus`, `injectionmolding`, and `materials` each have their own) |
+| `common_types.go` | Your own copy of `SecretReference` (one field, `Name string`) if the operator needs SIMOD credentials. **Don't import another provider's copy** — every provider duplicates this one tiny type instead of cross-importing API groups (confirmed convention: `injectionmolding` and `materials` each have their own) |
 | `<kind>_types.go` (one per Kind) | `<Kind>Spec`, `<Kind>Status` (if you have a status subresource), the `<Kind>`/`<Kind>List` structs, `+kubebuilder` markers, and the `init()` that registers them with `SchemeBuilder` |
 
 **Gotcha, confirmed live against the real CRD Gateway:** a Kind name ending in `s` (e.g. `Materials`
@@ -47,8 +48,7 @@ Decide your CRD's data-flow shape now, since it drives everything downstream:
 
 - **Create-once, no update/delete** (the pattern every SIMOD-backed CRD in this repo uses, because the
   backend's Platform API has no update/delete routes either): the reconciler no-ops once a status ID
-  field is set. See `apis/ianus/v1alpha1/component_types.go` or
-  `apis/materials/v1alpha1/materialsubmission_types.go`.
+  field is set. See `apis/materials/v1alpha1/materialsubmission_types.go`.
 - **Browse/refresh singleton**: `spec.refreshRequestedAt` bumped by the UI, `status.availableX` +
   `status.lastRefreshedAt` + `status.lastProcessedRefreshRequestedAt` (the last field exists because a
   status-only update doesn't bump `metadata.generation`, so without it the reconciler can't tell "new

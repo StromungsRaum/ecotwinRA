@@ -85,7 +85,7 @@ func (r *MaterialCatalogReconciler) Reconcile(ctx context.Context, req mcreconci
 		catalog.Status.Phase = phaseFailed
 		catalog.Status.Message = err.Error()
 		_ = client.Status().Update(ctx, catalog)
-		return reconcile.Result{}, err
+		return loginResult(err)
 	}
 
 	materials, err := simodClient.ListMaterials(ctx, token)

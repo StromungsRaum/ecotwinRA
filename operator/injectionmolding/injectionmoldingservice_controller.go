@@ -78,7 +78,7 @@ func (r *InjectionMoldingServiceReconciler) Reconcile(ctx context.Context, req m
 		return reconcile.Result{}, fmt.Errorf("failed to get injectionmoldingservice: %w", err)
 	}
 
-	url, err := modelsURL()
+	url, err := modelsURL(resolveBaseURL(ctx, client, svc.Namespace, svc.Spec.SecretRefs))
 	if err != nil {
 		svc.Status.Phase = phaseFailed
 		svc.Status.Message = err.Error()
@@ -106,7 +106,7 @@ func (r *InjectionMoldingServiceReconciler) Reconcile(ctx context.Context, req m
 		svc.Status.Phase = phaseFailed
 		svc.Status.Message = err.Error()
 		_ = client.Status().Update(ctx, svc)
-		return reconcile.Result{}, err
+		return loginResult(err)
 	}
 
 	if needsRefresh {
@@ -160,7 +160,7 @@ func (r *InjectionMoldingServiceReconciler) Reconcile(ctx context.Context, req m
 			// Bearer token the operator uses, which a browser link can't
 			// supply - point at the SIMOD web UI instead, where the user is
 			// already authenticated via session cookie.
-			resultsURL, err := simulationURL(sim.ID)
+			resultsURL, err := simulationURL(simodClient.BaseURL, sim.ID)
 			if err != nil {
 				svc.Status.Phase = phaseFailed
 				svc.Status.Message = err.Error()

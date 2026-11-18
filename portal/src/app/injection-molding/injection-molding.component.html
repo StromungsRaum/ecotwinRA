@@ -10,6 +10,14 @@
     <ui5-label slot="subheading">IANUS Simulation - Injection Molding Service</ui5-label>
 
     <ui5-toolbar slot="actionsBar" design="Transparent">
+      @if (credentialsConfigured() === true) {
+        <ui5-label class="credentials-status">
+          <ui5-icon name="accept" class="credentials-ok-icon"></ui5-icon> SIMOD credentials configured
+        </ui5-label>
+      } @else if (credentialsConfigured() === false) {
+        <ui5-label class="credentials-status credentials-missing">SIMOD credentials not set</ui5-label>
+      }
+      <ui5-toolbar-button text="SIMOD Credentials" icon="key" (click)="openCredentialsDialog()"></ui5-toolbar-button>
       <ui5-toolbar-button text="Add" design="Emphasized" icon="add" (click)="openAddDialog()"></ui5-toolbar-button>
     </ui5-toolbar>
   </ui5-dynamic-page-title>
@@ -34,7 +42,14 @@
             </div>
 
             @if (svc.status?.phase === 'Failed') {
-              <ui5-text class="error-text">{{ svc.status?.message }}</ui5-text>
+              @if (needsCredentialsFix(svc.status?.message)) {
+                <ui5-text class="error-text">
+                  {{ isMissingCredentials(svc.status?.message) ? 'SIMOD credentials are missing.' : svc.status?.message }}
+                </ui5-text>
+                <ui5-button design="Emphasized" (click)="openCredentialsDialog()">Set credentials</ui5-button>
+              } @else {
+                <ui5-text class="error-text">{{ svc.status?.message }}</ui5-text>
+              }
             } @else {
               @if (!svc.spec?.simulationId) {
                 <ui5-button design="Transparent" icon="action" (click)="openSimodLink(svc)">
@@ -109,3 +124,8 @@
     <ui5-button design="Emphasized" (click)="confirmAdd()">Add</ui5-button>
   </div>
 </ui5-dialog>
+
+<app-simod-credentials-dialog
+  [open]="credentialsDialogOpen()"
+  (closed)="onCredentialsDialogClosed($event)"
+></app-simod-credentials-dialog>

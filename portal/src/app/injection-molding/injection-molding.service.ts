@@ -22,8 +22,9 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, of, catchError, map } from 'rxjs';
 import { GraphQLClientService } from '../shared/graphql-client.service';
+import { SIMOD_SECRET_NAME } from '../shared/simod-credentials.service';
 
-const SECRET_NAME = 'simod-credentials';
+const SECRET_NAME = SIMOD_SECRET_NAME;
 
 export interface SimulationSummary {
   id: string;

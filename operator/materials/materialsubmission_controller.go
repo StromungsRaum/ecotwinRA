@@ -92,7 +92,7 @@ func (r *MaterialSubmissionReconciler) Reconcile(ctx context.Context, req mcreco
 		sub.Status.Phase = phaseFailed
 		sub.Status.Message = err.Error()
 		_ = client.Status().Update(ctx, sub)
-		return reconcile.Result{}, err
+		return loginResult(err)
 	}
 
 	resp, err := simodClient.CreateMaterial(ctx, token, buildMaterialRequest(sub.Spec.Material))
@@ -103,7 +103,7 @@ func (r *MaterialSubmissionReconciler) Reconcile(ctx context.Context, req mcreco
 		return reconcile.Result{}, err
 	}
 
-	materialURL, err := materialURL(resp.ID)
+	materialURL, err := materialURL(simodClient.BaseURL, resp.ID)
 	if err != nil {
 		sub.Status.Phase = phaseFailed
 		sub.Status.Message = err.Error()

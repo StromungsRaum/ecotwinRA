@@ -71,6 +71,22 @@
   color: var(--ianusNegativeTextColor);
 }
 
+.credentials-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-right: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.credentials-ok-icon {
+  color: var(--ianusPositiveColor);
+}
+
+.credentials-missing {
+  color: var(--ianusNegativeTextColor);
+}
+
 .timestamp-label {
   color: var(--ianusNeutralTextColor);
   font-size: 0.75rem;

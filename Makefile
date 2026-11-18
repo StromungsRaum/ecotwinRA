@@ -39,10 +39,6 @@ GORUN = $(GOCMD) run
 GOMOD = $(GOCMD) mod
 GOFMT = $(GOCMD) fmt
 
-# Binary names
-BINARY_NAME = ianus
-INIT_BINARY_NAME = ianus-init
-
 # Injection Molding Service provider binary names
 IM_BINARY_NAME = injectionmolding
 IM_INIT_BINARY_NAME = injectionmolding-init
@@ -59,9 +55,7 @@ BUILD_DIR = bin
 
 # Image parameters
 IMAGE_REGISTRY ?= ghcr.io/platform-mesh
-IMAGE_NAME ?= ianus-controller
 IMAGE_TAG ?= dev
-IMAGE ?= $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 
 # Portal image parameters
 PORTAL_IMAGE_NAME ?= ianus-portal
@@ -84,30 +78,23 @@ MAT_IMAGE ?= $(IMAGE_REGISTRY)/$(MAT_IMAGE_NAME):$(IMAGE_TAG)
 .PHONY: all
 all: build
 
-## build: Build all binaries
-.PHONY: build
-build: build-operator build-init
-
-## build-operator: Build the ianus operator binary
-.PHONY: build-operator
-build-operator: fmt vet
-	$(GOBUILD) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/ianus/...
-
-## build-init: Build the init/bootstrap binary
-.PHONY: build-init
-build-init: fmt vet
-	$(GOBUILD) -o $(BUILD_DIR)/$(INIT_BINARY_NAME) ./cmd/init/...
-
-## run: Run the ianus operator locally
-.PHONY: run
-run: fmt vet
-	$(GORUN) ./cmd/ianus/main.go --endpointslice=ianus.platform-mesh.io
-
-## init: Bootstrap provider resources into workspace (requires KUBECONFIG, optional HOST_OVERRIDE)
 HOST_OVERRIDE ?=
-.PHONY: init
-init: build-init
-	$(BUILD_DIR)/$(INIT_BINARY_NAME) $(if $(HOST_OVERRIDE),--host-override=$(HOST_OVERRIDE))
+
+## build: Build all provider binaries (operator + init, where applicable)
+.PHONY: build
+build: build-injectionmolding build-materials build-init-skz
+
+## generate: Generate code (deepcopy, etc.) and kcp resources for every provider
+.PHONY: generate
+generate: generate-injectionmolding generate-materials generate-skz
+
+## manifests: Generate CRD manifests for every provider
+.PHONY: manifests
+manifests: manifests-injectionmolding manifests-materials manifests-skz
+
+## apiresourceschemas: Generate APIResourceSchemas from CRDs for every provider
+.PHONY: apiresourceschemas
+apiresourceschemas: apiresourceschemas-injectionmolding apiresourceschemas-materials apiresourceschemas-skz
 
 ## build-operator-injectionmolding: Build the injectionmolding operator binary
 .PHONY: build-operator-injectionmolding
@@ -132,21 +119,6 @@ run-injectionmolding: fmt vet
 .PHONY: init-injectionmolding
 init-injectionmolding: build-init-injectionmolding
 	$(BUILD_DIR)/$(IM_INIT_BINARY_NAME) $(if $(HOST_OVERRIDE),--host-override=$(HOST_OVERRIDE))
-
-## generate: Generate code (deepcopy, etc.) and kcp resources for the ianus provider
-.PHONY: generate
-generate: $(CONTROLLER_GEN) manifests apiresourceschemas
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./apis/ianus/..."
-
-## manifests: Generate CRD manifests for the ianus provider
-.PHONY: manifests
-manifests: $(CONTROLLER_GEN)
-	$(CONTROLLER_GEN) crd paths="./apis/ianus/..." output:crd:artifacts:config=config/crds
-
-## apiresourceschemas: Generate APIResourceSchemas from CRDs for the ianus provider
-.PHONY: apiresourceschemas
-apiresourceschemas: manifests $(APIGEN)
-	$(APIGEN) --input-dir=config/crds --output-dir=config/kcp
 
 ## generate-injectionmolding: Generate code (deepcopy, etc.) and kcp resources for the injectionmolding provider
 .PHONY: generate-injectionmolding
@@ -248,16 +220,6 @@ vet:
 tidy:
 	$(GOMOD) tidy
 
-## image-build: Build controller container image locally
-.PHONY: image-build
-image-build:
-	docker build -t $(IMAGE) -f deploy/Dockerfile .
-
-## image-push: Push controller container image to registry
-.PHONY: image-push
-image-push: image-build
-	docker push $(IMAGE)
-
 ## portal-image-build: Build portal container image locally
 .PHONY: portal-image-build
 portal-image-build:
@@ -300,19 +262,14 @@ image-push-materials: image-build-materials
 
 ## images: Build all container images
 .PHONY: images
-images: image-build portal-image-build image-build-injectionmolding image-build-materials
+images: portal-image-build image-build-injectionmolding image-build-materials
 
 ## images-push: Push all container images
 .PHONY: images-push
-images-push: image-push portal-image-push image-push-injectionmolding image-push-materials
+images-push: portal-image-push image-push-injectionmolding image-push-materials
 
 # Kind cluster parameters
 KIND_CLUSTER ?= platform-mesh
-
-## kind-load: Load controller image into kind cluster
-.PHONY: kind-load
-kind-load: image-build
-	kind load docker-image $(IMAGE) --name $(KIND_CLUSTER)
 
 ## kind-load-portal: Load portal image into kind cluster
 .PHONY: kind-load-portal
@@ -336,7 +293,7 @@ kind-load-materials: image-build-materials
 
 ## kind-load-all: Load all images into kind cluster
 .PHONY: kind-load-all
-kind-load-all: kind-load kind-load-portal kind-load-injectionmolding kind-load-materials
+kind-load-all: kind-load-portal kind-load-injectionmolding kind-load-materials
 
 ## portal-run: Run portal container locally (accessible at http://localhost:$(PORTAL_PORT))
 .PHONY: portal-run

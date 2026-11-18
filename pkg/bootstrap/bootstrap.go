@@ -36,73 +36,14 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/yaml"
-
-	configcontroller "github.com/StromungsRaum/ecotwinRA/config/controller"
-	configkcp "github.com/StromungsRaum/ecotwinRA/config/kcp"
-	configprovider "github.com/StromungsRaum/ecotwinRA/config/provider"
 )
-
-// Bootstrap creates all provider resources from embedded YAML files.
-// It bootstraps kcp resources (APIResourceSchema, APIExport), provider
-// resources (ProviderMetadata, ContentConfiguration, RBAC), and controller
-// resources (ServiceAccount, RBAC, kubeconfig Secret).
-func Bootstrap(ctx context.Context, config *rest.Config, hostOverride string) error {
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
-	if err != nil {
-		return fmt.Errorf("failed to create discovery client: %w", err)
-	}
-
-	dynamicClient, err := dynamic.NewForConfig(config)
-	if err != nil {
-		return fmt.Errorf("failed to create dynamic client: %w", err)
-	}
-
-	kubeClient, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return fmt.Errorf("failed to create kubernetes client: %w", err)
-	}
-
-	cache := memory.NewMemCacheClient(discoveryClient)
-	mapper := restmapper.NewDeferredDiscoveryRESTMapper(cache)
-
-	logger := klog.FromContext(ctx)
-
-	// Bootstrap kcp resources (APIResourceSchema, APIExport)
-	logger.Info("Bootstrapping kcp resources")
-	if err := bootstrapFS(ctx, dynamicClient, mapper, cache, configkcp.FS); err != nil {
-		return fmt.Errorf("failed to bootstrap kcp resources: %w", err)
-	}
-
-	// Bootstrap provider resources (ProviderMetadata, ContentConfiguration, RBAC)
-	logger.Info("Bootstrapping provider resources")
-	if err := bootstrapFS(ctx, dynamicClient, mapper, cache, configprovider.FS); err != nil {
-		return fmt.Errorf("failed to bootstrap provider resources: %w", err)
-	}
-
-	// Bootstrap controller resources (ServiceAccount, RBAC)
-	logger.Info("Bootstrapping controller resources")
-	if err := bootstrapFS(ctx, dynamicClient, mapper, cache, configcontroller.FS); err != nil {
-		return fmt.Errorf("failed to bootstrap controller resources: %w", err)
-	}
-
-	// Create kubeconfig secret for controller
-	logger.Info("Creating controller kubeconfig secret")
-	if err := createControllerKubeconfigSecret(ctx, kubeClient, config, hostOverride, "default", "ianus-controller-token", "ianus-controller-kubeconfig"); err != nil {
-		return fmt.Errorf("failed to create controller kubeconfig secret: %w", err)
-	}
-
-	logger.Info("Bootstrap completed successfully")
-	return nil
-}
 
 // createControllerKubeconfigSecret creates a Secret containing a kubeconfig
 // that the controller can use to connect to the workspace from outside. It

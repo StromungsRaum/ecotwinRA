@@ -85,9 +85,9 @@ To run the ECOTWIN api server use the following:
 docker run --env-file .env -p 8000:8000 ecotwin-api
 ```
 
-## Create IANUS provider in Platform Mesh
+## Create Platform Mesh providers
 
-Details on how to build IANUS provider are in [Platform Mesh](./docs/platform-mesh.md).
+Details on how to build this repo's Platform Mesh providers are in [Platform Mesh](./docs/platform-mesh.md).
 
 ## Funding
 

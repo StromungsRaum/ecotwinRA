@@ -1,0 +1,11 @@
+{{- if .Values.devBackend.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "injectionmolding-controller.fullname" . }}-dev-ca-bundle
+  labels:
+    {{- include "injectionmolding-controller.labels" . | nindent 4 }}
+data:
+  ca-certificates.crt: |
+{{ .Files.Get "files/dev-ca-bundle.crt" | indent 4 }}
+{{- end }}

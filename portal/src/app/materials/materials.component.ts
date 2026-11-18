@@ -23,6 +23,8 @@ import {
   SelectComponent,
   TextComponent,
   TitleComponent,
+  ToolbarButtonComponent,
+  ToolbarComponent,
 } from '@ui5/webcomponents-ngx';
 
 import '@ui5/webcomponents-icons/dist/add.js';
@@ -32,7 +34,10 @@ import '@ui5/webcomponents-icons/dist/accept.js';
 import '@ui5/webcomponents-icons/dist/action.js';
 import '@ui5/webcomponents-icons/dist/navigation-left-arrow.js';
 import '@ui5/webcomponents-icons/dist/navigation-right-arrow.js';
+import '@ui5/webcomponents-icons/dist/key.js';
 
+import { SimodCredentialsDialogComponent } from '../shared/simod-credentials-dialog.component';
+import { SimodCredentialsService, isMissingCredentialsMessage, needsCredentialsFixMessage } from '../shared/simod-credentials.service';
 import { MaterialCatalog, MaterialSubmission, MaterialsService, SkzMaterial } from './materials.service';
 
 @Component({
@@ -50,6 +55,9 @@ import { MaterialCatalog, MaterialSubmission, MaterialsService, SkzMaterial } fr
     OptionComponent,
     IconComponent,
     InputComponent,
+    ToolbarComponent,
+    ToolbarButtonComponent,
+    SimodCredentialsDialogComponent,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './materials.component.html',
@@ -57,6 +65,14 @@ import { MaterialCatalog, MaterialSubmission, MaterialsService, SkzMaterial } fr
 })
 export class MaterialsComponent {
   private client = inject(MaterialsService);
+  private credentialsClient = inject(SimodCredentialsService);
+  /** Avoids re-popping the dialog on every poll once the user has seen it once this page visit. */
+  private credentialsPrompted = false;
+  public credentialsDialogOpen = signal<boolean>(false);
+  /** null = not checked yet, so the badge doesn't flash "Not set" before the real answer arrives. */
+  public credentialsConfigured = signal<boolean | null>(null);
+  public readonly isMissingCredentials = isMissingCredentialsMessage;
+  public readonly needsCredentialsFix = needsCredentialsFixMessage;
 
   private static readonly CATALOG_PAGE_SIZE = 5;
 
@@ -88,7 +104,30 @@ export class MaterialsComponent {
     LuigiClient.addInitListener(() => {
       LuigiClient.uxManager().showLoadingIndicator();
       this.load(() => LuigiClient.uxManager().hideLoadingIndicator());
+      this.checkCredentialsConfigured();
     });
+  }
+
+  private checkCredentialsConfigured(): void {
+    this.credentialsClient.hasCredentials().subscribe((configured) => this.credentialsConfigured.set(configured));
+  }
+
+  public openCredentialsDialog(): void {
+    this.credentialsDialogOpen.set(true);
+  }
+
+  public onCredentialsDialogClosed(saved: boolean): void {
+    this.credentialsDialogOpen.set(false);
+    if (saved) {
+      this.credentialsPrompted = false; // a fresh failure after this should prompt again
+      this.credentialsConfigured.set(true);
+      this.load();
+      // Test the new credentials right away instead of waiting for the
+      // operator's own 30s credentials-recheck interval - the catalog
+      // singleton always exists (ensureCatalog in load() above), so there's
+      // always something to refresh against.
+      this.refreshCatalog();
+    }
   }
 
   private load(onDone?: () => void): void {
@@ -117,11 +156,24 @@ export class MaterialsComponent {
     });
   }
 
+  private checkCredentials(submissions: MaterialSubmission[]): void {
+    if (this.credentialsPrompted) {
+      return;
+    }
+    const catalogFailed = needsCredentialsFixMessage(this.catalog()?.status?.message);
+    const submissionFailed = submissions.some((s) => needsCredentialsFixMessage(s.status?.message));
+    if (catalogFailed || submissionFailed) {
+      this.credentialsPrompted = true;
+      this.credentialsDialogOpen.set(true);
+    }
+  }
+
   private finishLoad(onDone?: () => void): void {
     this.client.listSubmissions().subscribe({
       next: (submissions) => {
         this.submissions.set(submissions);
         this.loading.set(false);
+        this.checkCredentials(submissions);
         onDone?.();
       },
       error: (err) => {
@@ -172,8 +224,11 @@ export class MaterialsComponent {
    * Polls listCatalogs() every 1.5s until status.lastProcessedRefreshRequestedAt
    * catches up to the timestamp we sent (the reconciler processes a refresh in
    * one reconcile, there's no separate "Refreshing" phase to watch - see
-   * operator/materials/materialcatalog_controller.go). Gives up silently after
-   * ~30s so a slow/stuck reconcile doesn't disable the button forever.
+   * operator/materials/materialcatalog_controller.go). Pushes every poll's
+   * result into the `catalog` signal (not just on a match) so a backend
+   * failure's status.phase 'Failed' + message reach the template immediately
+   * instead of only after giving up ~30s later with nothing to show - same
+   * reasoning as pollForSubmissionReady below.
    */
   private pollForRefresh(name: string, requestedAt: string, attemptsLeft: number): void {
     if (attemptsLeft <= 0) {
@@ -184,8 +239,13 @@ export class MaterialsComponent {
       this.client.listCatalogs().subscribe({
         next: (catalogs) => {
           const updated = catalogs.find((c) => c.metadata.name === name);
-          if (updated?.status?.lastProcessedRefreshRequestedAt === requestedAt) {
+          if (updated) {
             this.catalog.set(updated);
+          }
+          if (
+            updated?.status?.lastProcessedRefreshRequestedAt === requestedAt ||
+            updated?.status?.phase === 'Failed'
+          ) {
             this.catalogPage.set(0);
             this.refreshing.set(false);
           } else {

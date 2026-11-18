@@ -37,7 +37,7 @@ import (
 // YAML files. Structurally identical to Bootstrap/BootstrapInjectionMolding,
 // but targets the materials provider's own kcp/provider/controller config
 // sets and controller Secret names, so it can run against a separate kcp
-// workspace alongside the ianus/injectionmolding/skz providers.
+// workspace alongside the injectionmolding/skz providers.
 func BootstrapMaterials(ctx context.Context, config *rest.Config, hostOverride string) error {
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
 	if err != nil {

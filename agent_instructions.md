@@ -60,12 +60,14 @@ So the intended flow is `create_component` → `create_digital_twin` → (build 
 `get_single_entity()`, `create_component()`) but is a **prototype/proof-of-concept**, not the long-term
 integration (per user direction, 2026-09-07) — do not extend it with `create_digital_twin`/`create_simulation`.
 
-**The real client is now native Go**, in `pkg/simod/client.go` (`Login`, `CreateComponent`,
-`CreateDigitalTwin`, `CreateExecutionParameter`, `CreateSimulation`), wired to real CRDs — see CLAUDE.md's
-"SIMOD CRDs" section. One CRD per backend resource (`Component`, `DigitalTwin`, `ExecutionParameter`,
-`Simulation`; `apis/ianus/v1alpha1/*_types.go` + `operator/ianus/*_controller.go`). The previous placeholder
-`Model` CRD was removed (2026-09-07) once these existed — it's gone from the Go types, the operator, RBAC,
-and the live APIExport; don't reference it as if it still exists. Check `ianus-simod`'s `feat/platform-api`
+**The real client is native Go**, in `pkg/simod/client.go` (`Login`, `CreateMaterial`, `ListMaterials`,
+`ListSimulations`, `GetSimulation`), wired to the `materials` and `injectionmolding` providers' real
+CRDs — see CLAUDE.md's "SIMOD Platform API" section. The previous placeholder `Model` CRD was removed
+(2026-09-07). An `ianus` provider with `Component`/`DigitalTwin`/`ExecutionParameter`/`Simulation` CRDs
+(`apis/ianus/v1alpha1/*_types.go` + `operator/ianus/*_controller.go`, and the matching
+`CreateComponent`/`CreateDigitalTwin`/`CreateExecutionParameter`/`CreateSimulation` client calls)
+replaced it in turn, then was itself removed (2026-11-18) once it no longer played any role — don't
+reference either as if they still exist. Check `ianus-simod`'s `feat/platform-api`
 branch for the current controller shape before changing the request/response structs in
 `pkg/simod/client.go`, since that backend API is still evolving.
 
@@ -101,7 +103,7 @@ real subcommands and must be kept in sync whenever `ecotwin/scripts/twinctl.py`,
 - Don't remove the legacy `BackendConnector`/`AjaxApiHandler` (`/form/ajax`) path from
   `ecotwin/common/api_connector.py` without an explicit ask — it's deliberately kept working alongside the
   new token-based API, not superseded outright.
-- Don't hand-edit `config/crds/`, `config/kcp/`, or `zz_generated.deepcopy.go` — regenerate via
-  `make generate` (see [CLAUDE.md](CLAUDE.md) for the full codegen pipeline).
+- Don't hand-edit `config/crds-<name>/`, `config/kcp-<name>/`, or `zz_generated.deepcopy.go` — regenerate
+  via `make generate-<name>` (see [CLAUDE.md](CLAUDE.md) for the full codegen pipeline).
 - Do not assume `ianus-simod` is checked out or importable from this repo — it's a separate sibling repo,
   consumed only over HTTP by `ecotwin/common/api_connector.py`.

@@ -49,11 +49,40 @@ controller:
   # simodBaseURL drives both the SIMOD API calls and the public models3D link
   # (see operator/injectionmolding/simod_client.go's modelsURL) - bump this
   # to backend.int.simod.de, then backend.simod.de, as feat/platform-api
-  # progresses from dev to int to prod. Unlike ianus-controller, this value
-  # is wired through to the binary (which has no equivalent override today).
+  # progresses from dev to int to prod.
   simodBaseURL: "https://backend.dev.simod.de"
 
 # kcp kubeconfig secret
 kubeconfig:
   secretName: "injectionmolding-controller-kubeconfig"
   secretKey: "kubeconfig"
+
+# Arbitrary extra /etc/hosts entries for this pod. Generic - e.g. the
+# root.kcp.pm.127-0-0-1.sslip.io gotcha (see docs/quick_start.md's
+# troubleshooting section) needs this on a local pmctl-quickstart sandbox,
+# via --set hostAliases.enabled=true --set hostAliases.entries[0].ip=... etc.
+hostAliases:
+  enabled: false
+  entries: []
+
+# Local-sandbox-only: talking to the dev SIMOD backend from inside a pod on
+# this machine needs two workarounds that don't apply to int/prod (both run
+# elsewhere, with real DNS and real CA-signed certs - pods reach them via
+# standard cluster DNS, no override needed):
+#  1. backend.dev.simod.de resolves to 127.0.0.1 inside any pod here (a
+#     local-tunnel artifact, see docs/quick_start.md's "Local-sandbox-only
+#     gotchas") - hostAlias it to the kind network's gateway IP instead.
+#  2. that backend serves a self-signed cert this image's minimal CA set
+#     doesn't trust ("x509: certificate signed by unknown authority") -
+#     files/dev-ca-bundle.crt (this image's own base ca-certificates.crt,
+#     captured once, plus that one cert appended) replaces it wholesale.
+# Disabled by default - a real deployment should never need this; enable it
+# explicitly only when running the dev SIMOD backend on this same machine.
+devBackend:
+  enabled: false
+  hostname: "backend.dev.simod.de"
+  # kind's default docker network gateway - override via --set if your
+  # kind network's subnet differs (`docker network inspect kind --format
+  # '<<(index .IPAM.Config 0).Gateway>>'`, with the usual Go-template curly
+  # braces in place of the angle brackets here).
+  hostAliasIP: "172.18.0.1"

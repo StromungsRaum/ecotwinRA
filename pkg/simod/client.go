@@ -17,7 +17,8 @@ limitations under the License.
 // Package simod is a native Go client for the SIMOD backend's token-based
 // "Platform API" (POST /api/login, /api/platform/...). It is the Go
 // counterpart to ecotwin/common/api_connector.py's JobHandler, used by the
-// IANUS operator's SIMOD reconcilers instead of shelling out to Python.
+// injectionmolding and materials providers' SIMOD reconcilers instead of
+// shelling out to Python.
 package simod
 
 import (
@@ -28,7 +29,15 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 )
+
+// requestTimeout bounds every call to the SIMOD backend. http.DefaultClient
+// has no timeout, so a backend that's unreachable in a way that blocks the
+// TCP/TLS handshake (rather than failing fast with connection refused) would
+// otherwise hang the calling reconciler - and therefore the CRD's status -
+// forever, leaving the portal spinning with nothing to show.
+const requestTimeout = 15 * time.Second
 
 // Client talks to a SIMOD backend (e.g. https://backend.simod.de).
 type Client struct {
@@ -40,7 +49,7 @@ type Client struct {
 func NewClient(baseURL string) *Client {
 	return &Client{
 		BaseURL:    baseURL,
-		HTTPClient: http.DefaultClient,
+		HTTPClient: &http.Client{Timeout: requestTimeout},
 	}
 }
 
@@ -48,6 +57,20 @@ type loginResponse struct {
 	Success struct {
 		Token string `json:"token"`
 	} `json:"success"`
+}
+
+// AuthRejectedError means the SIMOD backend was reached and responded to
+// /api/login, but not with 200 OK - the backend itself is up, the problem is
+// with the request (almost always wrong email/password, occasionally a
+// backend-side error). Distinct from a network/timeout failure (no response
+// received at all), which stays a plain wrapped error - see IsAuthRejected.
+type AuthRejectedError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *AuthRejectedError) Error() string {
+	return fmt.Sprintf("SIMOD login rejected by backend: status %d: %s", e.StatusCode, e.Body)
 }
 
 // Login authenticates against POST /api/login and returns a bearer token.
@@ -67,7 +90,7 @@ func (c *Client) Login(ctx context.Context, email, password string) (string, err
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("login: unexpected status %d: %s", resp.StatusCode, body)
+		return "", &AuthRejectedError{StatusCode: resp.StatusCode, Body: string(body)}
 	}
 
 	var out loginResponse
@@ -146,83 +169,6 @@ func (c *Client) get(ctx context.Context, token, path string, respBody any) erro
 	return nil
 }
 
-// ComponentRequest is the payload for POST /api/platform/components.
-type ComponentRequest struct {
-	Name          string            `json:"name"`
-	ComponentType string            `json:"component_type"`
-	Parameters    map[string]string `json:"parameters"`
-	Components    map[string]string `json:"components"`
-}
-
-// ComponentResponse is the shape returned by the components endpoints.
-type ComponentResponse struct {
-	ID            string            `json:"id"`
-	Name          string            `json:"name"`
-	ComponentType string            `json:"component_type"`
-	Parameters    map[string]string `json:"parameters"`
-	Components    map[string]string `json:"components"`
-	CreatedAt     string            `json:"created_at"`
-}
-
-// CreateComponent calls POST /api/platform/components.
-func (c *Client) CreateComponent(ctx context.Context, token string, req ComponentRequest) (*ComponentResponse, error) {
-	var out ComponentResponse
-	if err := c.post(ctx, token, "/api/platform/components", req, &out); err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
-// DigitalTwinRequest is the payload for POST /api/platform/digital_twins.
-type DigitalTwinRequest struct {
-	Name        string `json:"name"`
-	ComponentID string `json:"component_id"`
-}
-
-// DigitalTwinResponse is the shape returned by the digital_twins endpoints.
-type DigitalTwinResponse struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	ComponentID string `json:"component_id"`
-	CreatedAt   string `json:"created_at"`
-}
-
-// CreateDigitalTwin calls POST /api/platform/digital_twins.
-func (c *Client) CreateDigitalTwin(ctx context.Context, token string, req DigitalTwinRequest) (*DigitalTwinResponse, error) {
-	var out DigitalTwinResponse
-	if err := c.post(ctx, token, "/api/platform/digital_twins", req, &out); err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
-// ExecutionParameterRequest is the payload for POST /api/platform/execution_parameters.
-type ExecutionParameterRequest struct {
-	FormID     string            `json:"form_id"`
-	Parameters map[string]string `json:"parameters"`
-}
-
-// ExecutionParameterResponse is the shape returned by the execution_parameters
-// endpoint. There is no GET for this resource - it is minted fresh per call.
-type ExecutionParameterResponse struct {
-	ID string `json:"id"`
-}
-
-// CreateExecutionParameter calls POST /api/platform/execution_parameters.
-func (c *Client) CreateExecutionParameter(ctx context.Context, token string, req ExecutionParameterRequest) (*ExecutionParameterResponse, error) {
-	var out ExecutionParameterResponse
-	if err := c.post(ctx, token, "/api/platform/execution_parameters", req, &out); err != nil {
-		return nil, err
-	}
-	return &out, nil
-}
-
-// SimulationRequest is the payload for POST /api/platform/simulations.
-type SimulationRequest struct {
-	DigitalTwinID        string `json:"digital_twin_id"`
-	ExecutionParameterID string `json:"execution_parameter_id"`
-}
-
 // SimulationResponse is the shape returned by the simulations endpoints.
 type SimulationResponse struct {
 	ID            string `json:"id"`
@@ -245,15 +191,6 @@ type SimulationResponse struct {
 	Notification      string   `json:"notification"`
 	SimulationFileIDs []string `json:"simulation_file_ids"`
 	CreatedAt         string   `json:"created_at"`
-}
-
-// CreateSimulation calls POST /api/platform/simulations.
-func (c *Client) CreateSimulation(ctx context.Context, token string, req SimulationRequest) (*SimulationResponse, error) {
-	var out SimulationResponse
-	if err := c.post(ctx, token, "/api/platform/simulations", req, &out); err != nil {
-		return nil, err
-	}
-	return &out, nil
 }
 
 // ListSimulations calls GET /api/platform/simulations, returning every

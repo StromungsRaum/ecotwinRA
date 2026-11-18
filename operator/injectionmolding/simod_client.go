@@ -21,8 +21,11 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	injectionmoldingv1alpha1 "github.com/StromungsRaum/ecotwinRA/apis/injectionmolding/v1alpha1"
 	"github.com/StromungsRaum/ecotwinRA/pkg/simod"
@@ -34,36 +37,72 @@ const (
 	phaseFailed  = "Failed"
 )
 
-// simodBaseURL is the SIMOD backend base URL used by the reconciler, set once
-// at startup via SetSIMODBaseURL (matching cmd/injectionmolding's
-// --simod-base-url flag). Also drives the status.url link - see modelsURL.
-var simodBaseURL = "https://backend.dev.simod.de"
+// credentialsRecheckInterval is how soon a reconcile is retried after a
+// *simod.CredentialsError (missing/invalid Secret) - short and fixed, not
+// the default escalating backoff a returned error would otherwise trigger,
+// since this is an expected, human-actionable state ("create the Secret"),
+// not an operator bug worth escalating/log-spamming about.
+const credentialsRecheckInterval = 30 * time.Second
 
-// SetSIMODBaseURL overrides the SIMOD backend base URL used by the
-// reconciler. Call before SetupWithManager.
+// loginResult turns a loginSIMOD error into the right reconcile outcome: a
+// credentials-class error (simod.NeedsCredentialsFix - the Secret is
+// missing/invalid, or the backend rejected it) is already reflected in
+// status by the caller and recovers on its own once an admin fixes the
+// Secret, so it's requeued directly at a short fixed interval instead of
+// being returned as a reconcile error - that keeps it out of the default
+// exponential backoff and the "reconciler error" log level reserved for
+// unexpected failures (like a genuine backend/network problem, which still
+// returns err below).
+func loginResult(err error) (ctrl.Result, error) {
+	if simod.NeedsCredentialsFix(err) {
+		return reconcile.Result{RequeueAfter: credentialsRecheckInterval}, nil
+	}
+	return reconcile.Result{}, err
+}
+
+// defaultSimodBaseURL is the SIMOD backend base URL used when a resource's
+// credentials Secret doesn't set its own "baseUrl" key, set once at startup
+// via SetSIMODBaseURL (matching cmd/injectionmolding's --simod-base-url
+// flag). See simod.LoginFromSecret/simod.ResolveBaseURL for the per-Secret
+// override.
+var defaultSimodBaseURL = "https://backend.dev.simod.de"
+
+// SetSIMODBaseURL overrides the default SIMOD backend base URL used by the
+// reconciler when a Secret doesn't configure its own. Call before
+// SetupWithManager.
 func SetSIMODBaseURL(url string) {
-	simodBaseURL = url
+	defaultSimodBaseURL = url
 }
 
 // loginSIMOD resolves the first SecretRef's `email`/`password` keys and logs
-// in against the SIMOD backend.
+// in against the SIMOD backend the Secret configures (or defaultSimodBaseURL
+// if it doesn't set its own).
 func loginSIMOD(ctx context.Context, cl client.Client, namespace string, secretRefs []injectionmoldingv1alpha1.SecretReference) (*simod.Client, string, error) {
 	if len(secretRefs) == 0 {
 		return nil, "", fmt.Errorf("no secretRefs configured")
 	}
-	return simod.LoginFromSecret(ctx, cl, namespace, secretRefs[0].Name, simodBaseURL)
+	return simod.LoginFromSecret(ctx, cl, namespace, secretRefs[0].Name, defaultSimodBaseURL)
 }
 
-// modelsURL derives the public SIMOD web UI link from the configured SIMOD
-// backend base URL by stripping a leading "backend." host prefix, e.g.
-// https://backend.dev.simod.de -> https://dev.simod.de/models3D and
-// https://backend.simod.de (prod has no subdomain) -> https://simod.de/models3D.
-// This keeps the link in lockstep with --simod-base-url across dev/int/prod
-// instead of hardcoding one environment.
-func modelsURL() (string, error) {
-	u, err := url.Parse(simodBaseURL)
+// resolveBaseURL peeks at the first SecretRef's "baseUrl" key (see
+// simod.ResolveBaseURL) without requiring a successful login - used to build
+// an informational link before credentials are necessarily configured yet.
+func resolveBaseURL(ctx context.Context, cl client.Client, namespace string, secretRefs []injectionmoldingv1alpha1.SecretReference) string {
+	secretName := ""
+	if len(secretRefs) > 0 {
+		secretName = secretRefs[0].Name
+	}
+	return simod.ResolveBaseURL(ctx, cl, namespace, secretName, defaultSimodBaseURL)
+}
+
+// modelsURL derives the public SIMOD web UI link from baseURL by stripping a
+// leading "backend." host prefix, e.g. https://backend.dev.simod.de ->
+// https://dev.simod.de/models3D and https://backend.simod.de (prod has no
+// subdomain) -> https://simod.de/models3D.
+func modelsURL(baseURL string) (string, error) {
+	u, err := url.Parse(baseURL)
 	if err != nil {
-		return "", fmt.Errorf("invalid simod base url %q: %w", simodBaseURL, err)
+		return "", fmt.Errorf("invalid simod base url %q: %w", baseURL, err)
 	}
 	u.Host = strings.TrimPrefix(u.Host, "backend.")
 	u.Path = "/models3D"
@@ -71,15 +110,15 @@ func modelsURL() (string, error) {
 }
 
 // simulationURL derives the public SIMOD web UI link for a single
-// simulation's results page from the configured SIMOD backend base URL,
-// e.g. https://backend.dev.simod.de -> https://dev.simod.de/simulation/<id>.
+// simulation's results page from baseURL, e.g.
+// https://backend.dev.simod.de -> https://dev.simod.de/simulation/<id>.
 // id is the Platform API's Simulation.ID, which is already the backend's
 // simulation uuid (ianus-simod's SimulationResource serializes the uuid
 // column as "id" - see pkg/simod/client.go's SimulationResponse).
-func simulationURL(id string) (string, error) {
-	u, err := url.Parse(simodBaseURL)
+func simulationURL(baseURL, id string) (string, error) {
+	u, err := url.Parse(baseURL)
 	if err != nil {
-		return "", fmt.Errorf("invalid simod base url %q: %w", simodBaseURL, err)
+		return "", fmt.Errorf("invalid simod base url %q: %w", baseURL, err)
 	}
 	u.Host = strings.TrimPrefix(u.Host, "backend.")
 	u.Path = "/simulation/" + id

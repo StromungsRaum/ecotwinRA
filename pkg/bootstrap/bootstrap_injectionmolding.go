@@ -37,7 +37,7 @@ import (
 // from embedded YAML files. Structurally identical to Bootstrap, but targets
 // the injectionmolding provider's own kcp/provider/controller config sets and
 // controller Secret names, so it can run against a separate kcp workspace
-// alongside (not instead of) the ianus provider.
+// alongside the materials/skz providers.
 func BootstrapInjectionMolding(ctx context.Context, config *rest.Config, hostOverride string) error {
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
 	if err != nil {
