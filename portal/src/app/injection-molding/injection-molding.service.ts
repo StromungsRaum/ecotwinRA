@@ -1,5 +1,5 @@
 /**
- * Injection Molding Service - GraphQL API Client
+ * Simulations - GraphQL API Client
  *
  * HttpBin-style: zero resources by default, the portal's "+" button creates
  * one InjectionMoldingService per card. Each card monitors at most one SIMOD

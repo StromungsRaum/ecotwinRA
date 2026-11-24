@@ -1,5 +1,5 @@
 /**
- * Generic Materials Service - GraphQL API Client
+ * Material Provider A - Materials - GraphQL API Client
  *
  * (Internally still "skz" - only the API group, URL path and labels were
  * renamed.) A dummy/demo provider: no backend, no operator. Its Materials are a

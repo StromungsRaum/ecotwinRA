@@ -1,5 +1,5 @@
 /**
- * Injection Molding Service Page Component
+ * Simulations Page Component
  *
  * HttpBin-style: no cards by default, "+" creates one. Each card: a link out
  * to the SIMOD web UI, a Refresh button that fetches the account's
@@ -291,7 +291,7 @@ export class InjectionMoldingComponent implements OnDestroy {
     LuigiClient.uxManager()
       .showConfirmationModal({
         type: 'warning',
-        header: 'Delete Injection Molding Service',
+        header: 'Delete Simulation',
         body: `Are you sure you want to delete "${svc.metadata.name}"?`,
         buttonConfirm: 'Delete',
         buttonDismiss: 'Cancel',

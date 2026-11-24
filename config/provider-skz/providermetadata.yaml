@@ -3,7 +3,7 @@ kind: ProviderMetadata
 metadata:
   name: genericmaterials.platform-mesh.io
 spec:
-  displayName: Generic Materials Service
+  displayName: Material Provider A - Materials
   description: |
     A vendor-neutral catalog of characterized plastics materials (viscosity,
     heat, temperature-shift, PVT, mechanical and shrinkage data), offered

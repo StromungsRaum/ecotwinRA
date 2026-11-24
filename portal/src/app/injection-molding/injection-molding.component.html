@@ -1,13 +1,13 @@
 <!--
-  Injection Molding Service UI - HttpBin-style: no cards by default, "+"
+  Simulations UI - HttpBin-style: no cards by default, "+"
   creates one. Each card: link to the SIMOD web UI, Refresh -> simulation
   dropdown -> Monitor, then a 5s-polled status with a tick + results link
   once complete.
 -->
 <ui5-dynamic-page>
   <ui5-dynamic-page-title slot="titleArea">
-    <ui5-title slot="heading" level="H3">Injection Molding Service</ui5-title>
-    <ui5-label slot="subheading">IANUS Simulation - Injection Molding Service</ui5-label>
+    <ui5-title slot="heading" level="H3">IANUS Simulation - Simulations</ui5-title>
+    <ui5-label slot="subheading">Run and monitor SIMOD injection molding simulations</ui5-label>
 
     <ui5-toolbar slot="actionsBar" design="Transparent">
       @if (credentialsConfigured() === true) {
@@ -104,7 +104,7 @@
 </ui5-dynamic-page>
 
 <ui5-dialog
-  header-text="Add Injection Molding Service"
+  header-text="Add Simulation"
   [open]="showAddDialog()"
   (close)="closeAddDialog()"
 >

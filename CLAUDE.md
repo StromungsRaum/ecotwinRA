@@ -92,7 +92,7 @@ Each follows the same per-provider file set, keyed by a `<name>` (`injectionmold
 - optionally `portal/src/app/<name>/` (Angular page) if the provider needs a custom UI — see "Portal" below
 
 **`skz` is the odd one out, twice over.** First, the name: users and API consumers know it as the
-"Generic Materials Service" - API group and APIExport `genericmaterials.platform-mesh.io`, portal path
+"Material Provider A - Materials" - API group and APIExport `genericmaterials.platform-mesh.io`, portal path
 `/generic-materials`. It began as a demo stand-in for the SKZ institute and only that outward-facing surface
 was renamed; the Go package (`apis/skz`), `config/*-skz` dirs, `cmd/skz-init`, `portal/src/app/skz` and the
 `make *-skz` targets deliberately keep the internal name `skz`. Second, it is a static, read-only catalog

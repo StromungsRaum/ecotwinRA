@@ -1,6 +1,6 @@
 apiVersion: v2
 name: injectionmolding-controller
-description: IANUS Simulation - Injection Molding Service Controller for KCP
+description: IANUS Simulation - Simulations Controller for KCP
 type: application
 version: 0.1.0
 appVersion: "0.1.0"

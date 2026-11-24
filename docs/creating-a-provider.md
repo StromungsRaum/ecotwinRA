@@ -241,7 +241,7 @@ errors and zero warnings.
 ## 14. Docs
 
 - [platform-mesh.md](./platform-mesh.md): add a `## <Provider Display Name> Provider` section mirroring
-  the `Injection Molding Service Provider`/`IANUS Simulation - Materials Provider` ones — what the CRDs
+  the `Simulations Provider`/`IANUS Simulation - Materials Provider` ones — what the CRDs
   are, the cross-provider story if any, then the numbered `kubectl ws create` → `make init-<name>` →
   extract kubeconfig → build/load image → `helm upgrade --install` walkthrough.
 - [quick_start.md](./quick_start.md): add a new numbered section for registering the provider, in the

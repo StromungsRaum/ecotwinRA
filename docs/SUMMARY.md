@@ -6,6 +6,7 @@
 - [Platform Mesh](./platform-mesh.md)
   - [Quick Start](./quick_start.md)
   - [Creating a Provider](./creating-a-provider.md)
+  - [Org Onboarding & Authorization Workflow](./org-onboarding-and-authorization.md)
 
 ## Concepts
 

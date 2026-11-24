@@ -239,7 +239,7 @@ This provider submits a material characterized in the `skz` provider to the real
 backend — see [platform-mesh.md](./platform-mesh.md#ianus-simulation---materials-provider) for the
 full cross-provider data flow.
 
-## 6b. Register the `skz` ("Generic Materials Service") provider
+## 6b. Register the `skz` ("Material Provider A - Materials") provider
 
 Bootstrap-only — no operator, no image, no chart (see [CLAUDE.md](../CLAUDE.md)'s "`skz` is the
 odd one out" section). Still needs its own workspace + `make init-skz` to publish the static

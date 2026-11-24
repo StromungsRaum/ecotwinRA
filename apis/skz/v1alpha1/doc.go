@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 // Package v1alpha1 contains API Schema definitions for the genericmaterials
-// v1alpha1 API group - the "Generic Materials Service" provider.
+// v1alpha1 API group - the "Material Provider A - Materials" provider.
 //
 // The provider started out as "SKZ" (a demo stand-in for a material-testing
 // institute) and was renamed to a vendor-neutral API. Only what users and API

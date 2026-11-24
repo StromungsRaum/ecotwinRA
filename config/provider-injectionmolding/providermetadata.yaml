@@ -3,7 +3,7 @@ kind: ProviderMetadata
 metadata:
   name: injectionmolding.platform-mesh.io
 spec:
-  displayName: IANUS Simulation - Injection Molding Service
+  displayName: IANUS Simulation - Simulations
   description: |
     Provider for Platform Mesh.
     Lists your existing IANUS Simulation injection molding Components, DigitalTwins

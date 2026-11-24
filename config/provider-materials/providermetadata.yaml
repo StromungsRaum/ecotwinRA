@@ -7,7 +7,7 @@ spec:
   description: |
     Provider for Platform Mesh.
     Lists StrömungsRaum's existing materials and lets you submit a new material -
-    picked from the Generic Materials Service's catalog - to StrömungsRaum.
+    picked from available materials - to StrömungsRaum.
   contacts:
     - displayName: IANUS Simulation Team
       email: ecotwin@ianus-simulation.de

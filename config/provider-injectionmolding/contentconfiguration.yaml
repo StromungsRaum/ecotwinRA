@@ -15,7 +15,7 @@ spec:
            "nodes": [
              {
                "pathSegment": "injection-molding",
-               "label": "Injection Molding Service",
+               "label": "IANUS Simulation - Simulations",
                "hideFromNav": false,
                "icon": "person-placeholder",
                "url": "https://{context.organization}.pm.127-0-0-1.sslip.io:8443/injection-molding/",
@@ -30,13 +30,13 @@ spec:
              {
                "locale": "",
                "textDictionary": {
-                 "injection-molding": "Injection Molding Service"
+                 "injection-molding": "IANUS Simulation - Simulations"
                }
              },
              {
                "locale": "en",
                "textDictionary": {
-                 "injection-molding": "Injection Molding Service"
+                 "injection-molding": "IANUS Simulation - Simulations"
                }
              }
            ]

@@ -98,9 +98,9 @@ The sections below describe each provider's own CRDs/operator/chart and how to r
 mechanics (workspace creation, `make init-<name>`, image build/load, `helm upgrade --install`) are the
 same pattern for every provider.
 
-## Injection Molding Service Provider
+## Simulations Provider
 
-The first provider in this repo ("IANUS Simulation - Injection Molding Service",
+The first provider in this repo ("IANUS Simulation - Simulations",
 APIExport `injectionmolding.platform-mesh.io`) - own workspace, own CRD (`InjectionMoldingService`),
 own operator binary/image/Helm chart. It
 doesn't create simulations itself: the operator logs into the real SIMOD backend, lists the
@@ -221,7 +221,7 @@ to submit that characterization to the real StrömungsRaum/SIMOD backend.
 See `apis/materials/v1alpha1/`, `apis/skz/v1alpha1/material_types.go`, `operator/materials/`,
 `pkg/simod/client.go`'s `Material*` types, and `portal/src/app/materials/`.
 
-The provider is known to users as the **Generic Materials Service** (API group and APIExport
+The provider is known to users as **Material Provider A - Materials** (API group and APIExport
 `genericmaterials.platform-mesh.io`, portal path `/generic-materials`); `skz` is only its internal name in
 this repo (Go package, `config/*-skz`, `make *-skz`).
 

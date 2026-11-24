@@ -15,7 +15,7 @@ spec:
            "nodes": [
              {
                "pathSegment": "generic-materials",
-               "label": "Generic Materials Service",
+               "label": "Material Provider A - Materials",
                "hideFromNav": false,
                "icon": "person-placeholder",
                "url": "https://{context.organization}.pm.127-0-0-1.sslip.io:8443/generic-materials/",
@@ -30,13 +30,13 @@ spec:
              {
                "locale": "",
                "textDictionary": {
-                 "generic-materials": "Generic Materials Service"
+                 "generic-materials": "Material Provider A - Materials"
                }
              },
              {
                "locale": "en",
                "textDictionary": {
-                 "generic-materials": "Generic Materials Service"
+                 "generic-materials": "Material Provider A - Materials"
                }
              }
            ]

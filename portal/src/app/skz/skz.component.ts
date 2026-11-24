@@ -1,5 +1,5 @@
 /**
- * Generic Materials Service Page Component (internally still "skz")
+ * Material Provider A - Materials Page Component (internally still "skz")
  *
  * Read-only catalog: the Materials are static and identical for every
  * consumer, pre-created in the provider workspace and served to each consumer
